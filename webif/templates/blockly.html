@@ -15,6 +15,7 @@ li.L5, li.L6, li.L7, li.L8
 <script type="text/javascript" language="javascript">
 
 function closeEditor() {
+  alert("closeEditor called blockly_close_editor on the server, but did nothing else");
   $.ajax({  url: "blockly_close_editor",
             type: "POST",
             data: { content: '' },
@@ -51,26 +52,14 @@ myWait = function (ms){
             <!--<td class="tabmin">&nbsp;</td>
             <td id="tab_xml" class="taboff">XML</td>-->
             <td class="tabmax">
-		<form name="input" action="index.html" method="POST" enctype="multipart/form-data">
-		{% if cmd != 'edit' and cmd != 'new' %}
-			<button onclick="function() {$.ajax({'url': 'logics_blockly_start'})}" class="btn btn-default btn-xs">{{ _('Aktivieren','button') }}</button>
-			<button onclick="function() {$.ajax({'url': 'logics_blockly_stop'})}" class="btn btn-default btn-xs">{{ _('Beenden','button') }}</button>
-			<button onclick="Code.saveBlocks()" class="btn btn-default btn-xs">{{ _('Blöcke speichern','button') }}</button>
-			<button onclick="Code.loadBlocks()" class="btn btn-default btn-xs">{{ _('Änderungen verwerfen','button') }}</button>
-			<button onclick="Code.discardBlocks()" class="btn btn-default btn-xs">{{ _('Leeren','button') }}</button>
-			<button onclick="javascript:window.close()" class="btn btn-default btn-xs">{{ _('Schließen','button') }}</button>
-		{% else %}
-			<button onclick="Code.saveBlocks(); closeEditor()" class="btn btn-default btn-xs">{{ _('Speichern & schließen','button') }}</button>
-			<button onclick="Code.saveBlocks()" class="btn btn-default btn-xs">{{ _('Speichern','button') }}</button>
-			<!--
-			<button onclick="Code.loadBlocks(); window.history.back()" class="btn btn-default btn-xs">{{ _('Änderungen verwerfen','button') }}</button>
-			-->
-			<button onclick="closeEditor()" class="btn btn-default btn-xs">{{ _('Verwerfen','button') }}</button>
-		{% endif %}
+			<button onclick="Code.saveBlocks()" class="btn btn-default btn-xs">{{ _('Logik speichern') }}</button>
+			<button onclick="Code.loadBlocks()" class="btn btn-default btn-xs">{{ _('Änderungen verwerfen') }}</button>
+			<button onclick="Code.discardBlocks()" class="btn btn-default btn-xs">{{ _('Leeren') }}</button>
+			<button onclick="closeEditor()" class="btn btn-default btn-xs">{{ _('Schließen') }}</button>
       <!--
-      <input name="close" value="{{ _('Schließen','button') }}" type="submit" class="btn btn-default btn-xs">
+      <input name="close" value="{{ _('Schließen') }}" type="submit" class="btn btn-default btn-xs">
       -->
-		</form>
+		<!--</form>-->
         	</td>
 			</tr>
 		</table>

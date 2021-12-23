@@ -2,7 +2,6 @@
 plugin:
     # Global plugin attributes
     type: system                  # plugin type (gateway, interface, protocol, system, web)
-#    subtype: core                 # plugin subtype (if applicable)
     description:                  # Alternative: description in multiple languages
         de: 'Blockly - graphischer Editor für Logiken - Noch in der Entwicklung, nicht für die Nutzung gedacht'
         en: 'Blockly - graphical editor for logics - Still in development, not for use'
@@ -13,7 +12,7 @@ plugin:
 #    documentation: https://github.com/smarthomeNG/plugins/blob/develop/mqtt/README.md        # url of documentation (wiki) page
 #    support: https://knx-user-forum.de/forum/supportforen/smarthome-py/959964-support-thread-für-das-backend-plugin
 
-    version: 1.4.0                # Plugin version
+    version: 1.8.2                # Plugin version
     sh_minversion: 1.4             # minimum shNG version to use this plugin
 #    sh_maxversion:                 # maximum shNG version to use this plugin (leave empty if latest)
     multi_instance: False          # plugin supports multi instance
