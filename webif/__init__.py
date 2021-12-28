@@ -66,6 +66,7 @@ class WebInterface(SmartPluginWebIf):
         tmpl = self.tplenv.get_template('blockly.html')
         return tmpl.render(dyn_sh_toolbox=self.items_model.get_hierarchy_as_xml_string(),
                            cmd=self.cmd,
+                           p=self.plugin,
                            timestamp=str(time.time()))
 
     @cherrypy.expose

@@ -1,14 +1,15 @@
-/*
-Relevant for Prettify only
-*/
+#codemirror_frame {
+  margin: 5px;
+  width: 100%; 
+  height: calc(100vh - 260px);
+}
 
-li.L0,
-li.L1,
-li.L2,
-li.L3,
-li.L5,
-li.L6,
-li.L7,
-li.L8 {
-  list-style-type: decimal !important;
+div.CodeMirror {
+  width: calc(100vw - 30px);
+  height: 100%;
+}
+
+#content_blocks {
+  width: 100%;
+  height: calc(100vh - 260px);
 }

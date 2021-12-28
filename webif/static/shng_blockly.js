@@ -1,14 +1,6 @@
-/**
-TODO: Import Prettify / PrettyPrint for Python Output
-*/
-
 var ShngBlockly_Engine = {};
-
-/**
- * Blockly's main workspace.
- * @type {Blockly.WorkspaceSvg}
- */
-ShngBlockly_Engine.workspace = null;
+ShngBlockly_Engine.blockly_workspace = null;
+ShngBlockly_Engine.python_editor = null;
 
 ShngBlockly_Engine.sleep = function (ms) {
     // TODO: REMOVE
@@ -27,15 +19,39 @@ ShngBlockly_Engine.stop = function () {
     alert("Magic!");
 };
 
-ShngBlockly_Engine.init = function (node_id) {
+//ShngBlockly_Engine.python_editor.setSize($('#codemirror_frame').width(), $('#codemirror_frame').height());
+
+ShngBlockly_Engine.refreshPython = function () {
+    var pycode = Blockly.Python.workspaceToCode(ShngBlockly_Engine.blockly_workspace);
+    ShngBlockly_Engine.python_editor.setValue(pycode);
+};
+
+ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
     var toolboxtxt = document.getElementById("toolbox").outerHTML;
     var toolboxXml = Blockly.Xml.textToDom(toolboxtxt);
 
-    ShngBlockly_Engine.workspace = Blockly.inject(node_id, {
+    ShngBlockly_Engine.blockly_workspace = Blockly.inject(blockly_area_id, {
         grid: { spacing: 25, length: 3, colour: "#ccc", snap: true },
         media: "static/blockly/media/",
         toolbox: toolboxXml,
         zoom: { controls: true, wheel: true },
+    });
+
+    // Blockly.svgResize(ShngBlockly_Engine.workspace);
+
+    ShngBlockly_Engine.python_editor = CodeMirror.fromTextArea(document.getElementById(python_area_id), {
+        mode: { name: "python" },
+        lineNumbers: true,
+        readOnly: true,
+        lineWrapping: true,
+        viewportMargin: Infinity,
+        extraKeys: {
+            "Ctrl-Q": function (cm) {
+                cm.foldCode(cm.getCursor());
+            },
+        },
+        foldGutter: true,
+        gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
     });
 };
 
@@ -51,8 +67,8 @@ ShngBlockly_Engine.loadBlocks = function () {
     // we get the XML representation of all the blockly logics from the backend
     request.done(function (response) {
         var xml = Blockly.Xml.textToDom(response);
-        Blockly.Xml.domToWorkspace(xml, ShngBlockly_Engine.workspace);
-        Code.renderContent();
+        Blockly.Xml.domToWorkspace(xml, ShngBlockly_Engine.blockly_workspace);
+        ShngBlockly_Engine.refreshPython();
     });
     request.fail(function (jqXHR, txtStat) {
         alert("LoadBlocks - Request failed: " + txtStat);
@@ -64,13 +80,13 @@ ShngBlockly_Engine.loadBlocks = function () {
  */
 ShngBlockly_Engine.saveBlocks = function () {
     var logicname = "";
-    var topblock = ShngBlockly_Engine.workspace.getTopBlocks()[0];
+    var topblock = ShngBlockly_Engine.blockly_workspace.getTopBlocks()[0];
     if (topblock.data == "sh_logic_main") {
-        logicname = ShngBlockly_Engine.workspace.getTopBlocks()[0].getFieldValue("LOGIC_NAME");
+        logicname = ShngBlockly_Engine.blockly_workspace.getTopBlocks()[0].getFieldValue("LOGIC_NAME");
     }
     //ShngBlockly_Engine.workspace;
-    var pycode = Blockly.Python.workspaceToCode(ShngBlockly_Engine.workspace);
-    var xmldom = Blockly.Xml.workspaceToDom(ShngBlockly_Engine.workspace);
+    var pycode = Blockly.Python.workspaceToCode(ShngBlockly_Engine.blockly_workspace);
+    var xmldom = Blockly.Xml.workspaceToDom(ShngBlockly_Engine.blockly_workspace);
     var xmltxt = Blockly.Xml.domToText(xmldom);
 
     $.ajax({
@@ -88,8 +104,21 @@ ShngBlockly_Engine.saveBlocks = function () {
  * Discard all blocks from the workspace.
  */
 ShngBlockly_Engine.discardBlocks = function () {
-    var count = ShngBlockly_Engine.workspace.getAllBlocks().length;
+    var count = ShngBlockly_Engine.blockly_workspace.getAllBlocks().length;
     if (count < 2 || window.confirm(Blockly.Msg.DELETE_ALL_BLOCKS.replace("%1", count))) {
-        ShngBlockly_Engine.workspace.clear();
+        ShngBlockly_Engine.blockly_workspace.clear();
     }
+    ShngBlockly_Engine.refreshPython();
 };
+
+$(document).ready(function () {
+    $('.nav-tabs a').on('shown.bs.tab', function(event){
+        var x = $(event.target).text();
+        if (x.includes("Python")) {
+            ShngBlockly_Engine.refreshPython();
+        }        
+    });
+
+    ShngBlockly_Engine.init("content_blocks", "content_python");
+    ShngBlockly_Engine.loadBlocks();
+});

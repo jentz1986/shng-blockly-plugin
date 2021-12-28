@@ -1,4 +1,4 @@
-{% extends "old_base.html" %}
+{% extends "base_plugin.html" %}
 
 {% set logo_frame = false %}
 {% set use_bodytabs = true %}
@@ -6,7 +6,7 @@
 {% set tab1title = _('Blocks') %}
 {% set tab2title = _('Python') %}
 
-{% set start_tab = 2 %}
+{% set start_tab = 1 %}
 
 {% block pluginscripts %}
   {% include "blockly_head_scripts.html" %}
@@ -17,16 +17,20 @@
 
 {% block buttons %}
   {% include "logics_blockly_toolbox.html" %}
-  <button onclick="ShngBlockly_Engine.saveBlocks()" class="btn btn-default btn-xs">{{ _('Logik speichern') }}</button>
-  <button onclick="ShngBlockly_Engine.loadBlocks()" class="btn btn-default btn-xs">{{ _('Änderungen verwerfen') }}</button>
-  <button onclick="ShngBlockly_Engine.discardBlocks()" class="btn btn-default btn-xs">{{ _('Leeren') }}</button>
-  <button onclick="ShngBlockly_Engine.stop()" class="btn btn-default btn-xs">{{ _('Schließen') }}</button>
+  <button onclick="ShngBlockly_Engine.saveBlocks()" class="btn btn-shng btn-sm">{{ _('Logik speichern') }}</button>
+  <button onclick="ShngBlockly_Engine.loadBlocks()" class="btn btn-shng btn-sm">{{ _('Änderungen verwerfen') }}</button>
+  <button onclick="ShngBlockly_Engine.discardBlocks()" class="btn btn-shng btn-sm">{{ _('Leeren') }}</button>
+  <button onclick="ShngBlockly_Engine.stop()" class="btn btn-shng btn-sm">{{ _('Schließen') }}</button>
 {% endblock %}
 
 {% block bodytab1 %}
-  <div id="content_blocks" class="content"></div>
+<div style="margin: 5px;">
+  <div id="content_blocks"></div>
+</div>
 {% endblock %}
 
 {% block bodytab2 %}
-  <pre id="content_python" class="content"></pre>
+<div id="codemirror_frame">
+  <textarea id="content_python"></textarea>
+</div>
 {% endblock %}
