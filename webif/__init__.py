@@ -28,6 +28,7 @@
 #########################################################################
 
 import time
+import json
 import cherrypy
 from cherrypy.lib.static import serve_file
 
@@ -83,3 +84,7 @@ class WebInterface(SmartPluginWebIf):
         self.plugin.blockly_to_shng_logic.save_logic(logic_name=name,
                                                      python_code=py,
                                                      blockly_xml=xml)
+
+    @cherrypy.expose
+    def blockly_get_logics(self):
+        return json.dumps(self.plugin.blockly_to_shng_logic.get_blockly_logics())
