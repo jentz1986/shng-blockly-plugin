@@ -4,12 +4,6 @@
 var Code = {};
 
 /**
- * Blockly's main workspace.
- * @type {Blockly.WorkspaceSvg}
- */
-Code.workspace = null;
-
-/**
  * List of tab names.
  * @private
  */
@@ -18,35 +12,13 @@ Code.TABS_ = ['blocks', 'python'];
 Code.selected = 'blocks';
 
 
-
-/**
- * Restore code blocks from file on SmartHomeNG server
- *
- */
-Code.loadBlocks = function() {
-//  $.ajaxSetup({ cache: false });
-  var request = $.ajax({url: 'blockly_load_logic', data : {'uniq_param' : (new Date()).getTime()}, dataType: 'text'});
-  // we get the XML representation of all the blockly logics from the backend
-  request.done(function(response)
-  {
-   	//alert('LoadBlocks - Request success: ' + response);
-    var xml = Blockly.Xml.textToDom(response);
-    Blockly.Xml.domToWorkspace(xml, Code.workspace);
-    //Code.workspace.clear();
-    Code.renderContent()
-  });
-  request.fail(function(jqXHR, txtStat) 
-  {alert('LoadBlocks - Request failed: ' + txtStat);});
-};
-
-
 /**
  * Populate the Python pane with content generated from the blocks, when selected.
  */
 Code.renderContent = function() {
 	//if (Code.selected == 'python') {
 		var content = document.getElementById('content_python');
-		pycode = Blockly.Python.workspaceToCode(Code.workspace);
+		pycode = Blockly.Python.workspaceToCode(ShngBlockly_Engine.workspace);
 		content.textContent = pycode;
 		if (typeof prettyPrintOne == 'function') {
 		  pycode = content.innerHTML;
@@ -55,53 +27,6 @@ Code.renderContent = function() {
 		}
 	//}
 };
-
-Code.wait = function (ms){
-   var start = new Date().getTime();
-   var end = start;
-   while(end < start + ms) {
-     end = new Date().getTime();
-  }
-}
-
-/**
- * Save XML and PYTHON code to file on SmartHomeNG server.
- */
-Code.saveBlocks = function() {
-  var logicname = "";
-  var topblock = Code.workspace.getTopBlocks()[0];
-  if (topblock.data == "sh_logic_main") {
-      logicname = Code.workspace.getTopBlocks()[0].getFieldValue('LOGIC_NAME')
-  };
-  //Code.workspace;
-  var pycode = Blockly.Python.workspaceToCode(Code.workspace);
-  var xmldom = Blockly.Xml.workspaceToDom(Code.workspace);
-  var xmltxt = Blockly.Xml.domToText(xmldom);
-
-  $.ajax({  url: "blockly_save_logic",
-            type: "POST",
-            async: false,
-            data: {xml: xmltxt, py: pycode, name: logicname },
-            success: function(response) {
-                alert(SaveBlocks - response +' ?');
-            //    $("#test").html(response);
-            }
-        });
-};
-
-
-/**
- * Discard all blocks from the workspace.
- */
-Code.discardBlocks = function() {
-	var count = Code.workspace.getAllBlocks().length;
-	if (count < 2 ||
-	  	window.confirm(Blockly.Msg.DELETE_ALL_BLOCKS.replace('%1', count))) {
-		Code.workspace.clear();
-		Code.renderContent(); // ?
-	}
-};
-
 
 /**
  * Initialize Blockly.  Called on page load.
@@ -123,33 +48,16 @@ Code.init = function() {
 			el.style.width = (2 * bBox.width - el.offsetWidth) + 'px';
 		}
 		// Make the 'Blocks' tab line up with the toolbox.
-		if (Code.workspace && Code.workspace.toolbox_.width) {
+		if (ShngBlockly_Engine.workspace && ShngBlockly_Engine.workspace.toolbox_.width) {
 			document.getElementById('tab_blocks').style.minWidth =
-				(Code.workspace.toolbox_.width ) + 'px';
+				(ShngBlockly_Engine.workspace.toolbox_.width ) + 'px';
 				// Account for the 19 pixel margin and on each side.
 		}
 	};
 	window.addEventListener('resize', onresize, false);
-	
-	var toolboxtxt = document.getElementById('toolbox').outerHTML;
-	var toolboxXml = Blockly.Xml.textToDom(toolboxtxt);
-	
-	Code.workspace = Blockly.inject('content_blocks',
-	  {grid:
-	      {spacing: 25,
-	       length: 3,
-	       colour: '#ccc',
-	       snap: true},
-	   media: 'static/blockly/media/',
-	   //rtl: rtl,
-	   toolbox: toolboxXml,
-	   zoom:
-	       {controls: true,
-	        wheel: true}
-	  });
-	
-	//window.setTimeout(Code.loadBlocks, 0);
-	Code.loadBlocks();
+
+	ShngBlockly_Engine.init('content_blocks')
+	ShngBlockly_Engine.loadBlocks();
 	
 	Code.tabClick(Code.selected);
 	
@@ -157,7 +65,7 @@ Code.init = function() {
 	Code.bindClick('tab_python', function(name_) {return function() {Code.tabClick(name_);};}('python'));
 	
 	onresize();
-	Blockly.svgResize(Code.workspace);
+	Blockly.svgResize(ShngBlockly_Engine.workspace);
 	
 	// Lazy-load the syntax-highlighting.
 	Code.importPrettify();
@@ -186,7 +94,7 @@ Code.bindClick = function(el, func) {
 Code.tabClick = function(clickedName) {
 
   if (document.getElementById('tab_blocks').className == 'tabon') {
-    Code.workspace.setVisible(false);
+    ShngBlockly_Engine.workspace.setVisible(false);
   }
 
   if (clickedName == 'blocks') {
@@ -194,7 +102,7 @@ Code.tabClick = function(clickedName) {
 	document.getElementById('tab_blocks').className = 'tabon';
 	document.getElementById('content_python').style.visibility = 'hidden';
 	document.getElementById('content_blocks').style.visibility = 'visible';
-    Code.workspace.setVisible(true);
+    ShngBlockly_Engine.workspace.setVisible(true);
   } else {
 	document.getElementById('tab_blocks').className = 'taboff';
 	document.getElementById('tab_python').className = 'tabon';
@@ -203,7 +111,7 @@ Code.tabClick = function(clickedName) {
   }
 
   Code.renderContent();
-  Blockly.svgResize(Code.workspace);
+  Blockly.svgResize(ShngBlockly_Engine.workspace);
 };
 
 /**
@@ -214,10 +122,10 @@ Code.importPrettify = function() {
   //<script src="../prettify.js"></script>
   var link = document.createElement('link');
   link.setAttribute('rel', 'stylesheet');
-  link.setAttribute('href', 'static/js/google-prettify/prettify.css');
+  link.setAttribute('href', 'static/deleteme/js/google-prettify/prettify.css');
   document.head.appendChild(link);
   var script = document.createElement('script');
-  script.setAttribute('src', 'static/js/google-prettify/prettify.js');
+  script.setAttribute('src', 'static/deleteme/js/google-prettify/prettify.js');
   document.head.appendChild(script);
 };
 
