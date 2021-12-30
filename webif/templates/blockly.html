@@ -18,9 +18,9 @@
 
 {% block buttons %}
   {% include "logics_blockly_toolbox.html" %}
-  <button onclick="ShngBlockly_UI.actionNew()" class="btn btn-shng btn-sm">{{ _('Neu') }}</button>
-  <button onclick="ShngBlockly_UI.actionSave()" class="btn btn-shng btn-sm">{{ _('Speichern') }}</button>
-  <button onclick="ShngBlockly_UI.actionLoad()" class="btn btn-shng btn-sm">{{ _('Laden') }}</button>
+  <button onclick="ShngBlockly_UI.actionNew()" class="btn btn-shng btn-sm"><i class="fas fa-plus"></i>&nbsp;&nbsp;&nbsp;{{ _('Neu') }}&nbsp;</button>
+  <button onclick="ShngBlockly_UI.actionSave()" class="btn btn-shng btn-sm"><i class="fas fa-save"></i>&nbsp;&nbsp;&nbsp;{{ _('Speichern') }}&nbsp;</button>
+  <button onclick="ShngBlockly_UI.actionLoad()" class="btn btn-shng btn-sm"><i class="fas fa-folder-open"></i>&nbsp;&nbsp;&nbsp;{{ _('Laden') }}&nbsp;</button>
 {% endblock %}
 
 {% block bodytab1 %}
