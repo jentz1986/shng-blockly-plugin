@@ -1,29 +1,19 @@
+var ShngBlockly_Constants = {};
+
 var ShngBlockly_Engine = {};
+
 ShngBlockly_Engine.blockly_workspace = null;
+
 ShngBlockly_Engine.python_editor = null;
-
-ShngBlockly_Engine.sleep = function (ms) {
-    // TODO: REMOVE
-    var start = new Date().getTime();
-    var end = start;
-    while (end < start + ms) {
-        end = new Date().getTime();
-    }
-};
-
-ShngBlockly_Engine.stop = function () {
-    alert("closeEditor called blockly_close_editor on the server, but did nothing else");
-    $.ajax({ url: "blockly_close_editor", type: "POST", data: { content: "" } });
-    ShngBlockly_Engine.sleep(1000);
-    // window.close();
-    alert("Magic!");
-};
-
-//ShngBlockly_Engine.python_editor.setSize($('#codemirror_frame').width(), $('#codemirror_frame').height());
 
 ShngBlockly_Engine.refreshPython = function () {
     var pycode = Blockly.Python.workspaceToCode(ShngBlockly_Engine.blockly_workspace);
     ShngBlockly_Engine.python_editor.setValue(pycode);
+};
+
+ShngBlockly_Engine.workspaceShouldBeSaved = function () {
+    undoStack = ShngBlockly_Engine.blockly_workspace.getUndoStack();
+    return undoStack.length > 0;
 };
 
 ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
@@ -36,8 +26,6 @@ ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
         toolbox: toolboxXml,
         zoom: { controls: true, wheel: true },
     });
-
-    // Blockly.svgResize(ShngBlockly_Engine.workspace);
 
     ShngBlockly_Engine.python_editor = CodeMirror.fromTextArea(document.getElementById(python_area_id), {
         mode: { name: "python" },
@@ -58,20 +46,25 @@ ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
 /**
  * Restore code blocks from file on SmartHomeNG server
  */
-ShngBlockly_Engine.loadBlocks = function () {
+ShngBlockly_Engine.loadBlocks = function (logicName = null) {
+    if (logicName == null) {
+        logicName = ShngBlockly_Constants.DefaultLogicTemplate;
+    }
     var request = $.ajax({
-        url: "blockly_load_logic",
-        data: { uniq_param: new Date().getTime() },
+        url: ShngBlockly_Constants.ApiEndpointLoadLogic,
+        data: { logic_name: logicName, uniq_param: new Date().getTime() },
         dataType: "text",
     });
     // we get the XML representation of all the blockly logics from the backend
     request.done(function (response) {
         var xml = Blockly.Xml.textToDom(response);
+        ShngBlockly_Engine.blockly_workspace.clear();
         Blockly.Xml.domToWorkspace(xml, ShngBlockly_Engine.blockly_workspace);
         ShngBlockly_Engine.refreshPython();
+        ShngBlockly_Engine.blockly_workspace.clearUndo();
     });
     request.fail(function (jqXHR, txtStat) {
-        alert("LoadBlocks - Request failed: " + txtStat);
+        ShngBlockly_UI.dialogErrorOK(ShngBlockly_Constants.DialogMessageCannotLoad + logicName);
     });
 };
 
@@ -90,35 +83,131 @@ ShngBlockly_Engine.saveBlocks = function () {
     var xmltxt = Blockly.Xml.domToText(xmldom);
 
     $.ajax({
-        url: "blockly_save_logic",
+        url: ShngBlockly_Constants.ApiEndpointSaveLogic,
         type: "POST",
         async: false,
         data: { xml: xmltxt, py: pycode, name: logicname },
         success: function (response) {
-            alert("" + response + " ?");
+            ShngBlockly_Engine.blockly_workspace.clearUndo();
+            ShngBlockly_UI.dialogOK(ShngBlockly_Constants.DialogMessageSuccessfullySaved);
         },
     });
 };
 
-/**
- * Discard all blocks from the workspace.
- */
-ShngBlockly_Engine.discardBlocks = function () {
-    var count = ShngBlockly_Engine.blockly_workspace.getAllBlocks().length;
-    if (count < 2 || window.confirm(Blockly.Msg.DELETE_ALL_BLOCKS.replace("%1", count))) {
-        ShngBlockly_Engine.blockly_workspace.clear();
+ShngBlockly_UI = {};
+
+ShngBlockly_UI.checkUnsavedChangesBefore = function (onOK) {
+    if (ShngBlockly_Engine.workspaceShouldBeSaved()) {
+        onCancel = function () {};
+        ShngBlockly_UI.dialogOKCancel(ShngBlockly_Constants.DialogMessageUnsavedChanges, onOK, onCancel);
+        return;
+    } else {
+        onOK();
     }
-    ShngBlockly_Engine.refreshPython();
+};
+
+ShngBlockly_UI.actionNew = function () {
+    ShngBlockly_UI.checkUnsavedChangesBefore(function () {
+        ShngBlockly_Engine.loadBlocks();
+    });
+};
+
+ShngBlockly_UI.actionSave = function () {
+    ShngBlockly_Engine.saveBlocks();
+};
+
+ShngBlockly_UI.actionLoad = function () {
+    ShngBlockly_UI.checkUnsavedChangesBefore(function () {
+        $("#loadLogicDialog").modal("show");
+    });
+};
+
+ShngBlockly_UI.performUpdateBlocks = function (logicName) {
+    ShngBlockly_Engine.loadBlocks(logicName);
+    $("#loadLogicDialog").modal("hide");
+};
+
+ShngBlockly_UI.dialogOK = function (message) {
+    $("#dialogOK .modal-header h4").html("Info"); // TODO: Übersetzen
+    $("#dialogOK .modal-body div").html(message);
+    $("#dialogOK").modal("show");
+};
+
+ShngBlockly_UI.dialogErrorOK = function (message) {
+    $("#dialogOK .modal-header h4").html("Error"); // TODO: Übersetzen
+    $("#dialogOK .modal-body div").html(message);
+    $("#dialogOK").modal("show");
+};
+
+ShngBlockly_UI.dialogOKCancel = function (message, onOK, onCancel) {
+    wrappedOnOK = function () {
+        onOK();
+        $("#dialogOKCancel").modal("hide");
+    };
+    wrappedOnCncl = function () {
+        onCancel();
+        $("#dialogOKCancel").modal("hide");
+    };
+    $("#dialogOKCancel .modal-header h4").html("Error"); // TODO: Übersetzen
+    $("#dialogOKCancel .modal-header button.close").unbind().click(wrappedOnCncl);
+    $("#dialogOKCancel .modal-body div").html(message);
+    $("#dialogOKCancel .modal-footer button.OK").unbind().click(wrappedOnOK);
+    $("#dialogOKCancel .modal-footer button.Cancel").unbind().click(wrappedOnCncl);
+    $("#dialogOKCancel").modal("show");
+};
+
+ShngBlockly_UI.renderContentIntoLoadLogicDialog = function (logicList) {
+    $("#logicList").empty();
+    logicList.forEach((logic) => {
+        $("#logicList").append(
+            "<button onclick=\"ShngBlockly_UI.performUpdateBlocks('" +
+                logic +
+                '\')" class="btn btn-shng btn-sm">' +
+                logic +
+                "</button>"
+        );
+    });
+};
+
+ShngBlockly_UI.init = function () {
+    window.onbeforeunload = function () {
+        window.addEventListener("beforeunload", function (e) {
+            if (ShngBlockly_Engine.workspaceShouldBeSaved()) {
+                e["returnValue"] = ShngBlockly_Constants.DialogMessageUnsavedChanges;
+            } else {
+                // the absence of a returnValue property on the event will guarantee the browser unload happens
+                delete e["returnValue"];
+            }
+        });
+    };
+
+    $(".nav-tabs a").on("shown.bs.tab", function (event) {
+        var x = $(event.target).text();
+        if (x.includes(ShngBlockly_Constants.TabHeaderPythonEditor)) {
+            ShngBlockly_Engine.refreshPython();
+        }
+    });
+
+    $("#loadLogicDialog").on("show.bs.modal", function () {
+        $.ajax({
+            url: ShngBlockly_Constants.ApiEndpointGetLogics,
+            type: "GET",
+            async: false,
+            data: { uniq_param: new Date().getTime() },
+            success: function (response) {
+                loadedLogics = JSON.parse(response);
+                ShngBlockly_UI.renderContentIntoLoadLogicDialog(loadedLogics);
+            },
+        });
+    });
 };
 
 $(document).ready(function () {
-    $('.nav-tabs a').on('shown.bs.tab', function(event){
-        var x = $(event.target).text();
-        if (x.includes("Python")) {
-            ShngBlockly_Engine.refreshPython();
-        }        
-    });
-
     ShngBlockly_Engine.init("content_blocks", "content_python");
+    ShngBlockly_UI.init();
+
+    /**
+     * TODO: Read Parameter from UI to identify logic to be loaded
+     */
     ShngBlockly_Engine.loadBlocks();
 });

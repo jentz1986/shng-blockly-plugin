@@ -60,7 +60,7 @@ class WebInterface(SmartPluginWebIf):
         self.tplenv = self.init_template_environment()
 
     @cherrypy.expose
-    def index(self):
+    def index(self, reload=None):
         cherrypy.lib.caching.expires(0)
 
         tmpl = self.tplenv.get_template('blockly.html')
@@ -70,13 +70,18 @@ class WebInterface(SmartPluginWebIf):
                            timestamp=str(time.time()))
 
     @cherrypy.expose
-    def blockly_load_logic(self, uniq_param):
+    def blockly_load_logic(self, uniq_param, logic_name):
         """
         the uniq-param is used to unify the request from jquery-side, 
         if the parameter is deleted here, the call will fail
         """
-        fn_xml = self.plugin.blockly_to_shng_logic.get_blockly_logic_file_name()
-        return serve_file(fn_xml, content_type='application/xml')
+        try:
+            fn_xml = self.plugin.blockly_to_shng_logic.get_blockly_logic_file_name(
+                logic_name)
+            return serve_file(fn_xml, content_type='application/xml')
+        except FileNotFoundError:
+            cherrypy.response.status = 404
+            return f"Logic {logic_name} not found"
 
     @cherrypy.expose
     def blockly_save_logic(self, py, xml, name):
@@ -87,5 +92,5 @@ class WebInterface(SmartPluginWebIf):
                                                      blockly_xml=xml)
 
     @cherrypy.expose
-    def blockly_get_logics(self):
+    def blockly_get_logics(self, uniq_param):
         return json.dumps(self.plugin.blockly_to_shng_logic.get_blockly_logics())

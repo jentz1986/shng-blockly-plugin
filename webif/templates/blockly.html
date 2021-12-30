@@ -13,14 +13,14 @@
 {% endblock pluginscripts %}
 
 {% block headtable %}
+
 {% endblock headtable %}
 
 {% block buttons %}
   {% include "logics_blockly_toolbox.html" %}
-  <button onclick="ShngBlockly_Engine.saveBlocks()" class="btn btn-shng btn-sm">{{ _('Logik speichern') }}</button>
-  <button onclick="ShngBlockly_Engine.loadBlocks()" class="btn btn-shng btn-sm">{{ _('Änderungen verwerfen') }}</button>
-  <button onclick="ShngBlockly_Engine.discardBlocks()" class="btn btn-shng btn-sm">{{ _('Leeren') }}</button>
-  <button onclick="ShngBlockly_Engine.stop()" class="btn btn-shng btn-sm">{{ _('Schließen') }}</button>
+  <button onclick="ShngBlockly_UI.actionNew()" class="btn btn-shng btn-sm">{{ _('Neu') }}</button>
+  <button onclick="ShngBlockly_UI.actionSave()" class="btn btn-shng btn-sm">{{ _('Speichern') }}</button>
+  <button onclick="ShngBlockly_UI.actionLoad()" class="btn btn-shng btn-sm">{{ _('Laden') }}</button>
 {% endblock %}
 
 {% block bodytab1 %}
@@ -33,4 +33,73 @@
 <div id="codemirror_frame">
   <textarea id="content_python"></textarea>
 </div>
+{% endblock %}
+
+
+{% block content %}
+  {{ super() }}
+  <!-- The Modal -->
+  <div class="modal" id="loadLogicDialog">
+    <div class="modal-dialog">
+      <div class="modal-content">      
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title">{{ _('Laden') }}</h4>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>        
+        <!-- Modal body -->
+        <div class="modal-body">
+          <div id="logicList">
+          </div>
+        </div>        
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" data-dismiss="modal">{{ _('Abbrechen') }}</button>
+        </div>        
+      </div>
+    </div>
+  </div>
+
+  <!-- The Modal -->
+  <div class="modal" id="dialogOK">
+    <div class="modal-dialog">
+      <div class="modal-content">      
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title"></h4>
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+        </div>        
+        <!-- Modal body -->
+        <div class="modal-body">
+          <div></div>
+        </div>        
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn" data-dismiss="modal">{{ _('OK') }}</button>
+        </div>        
+      </div>
+    </div>
+  </div>
+
+  <!-- The Modal -->
+<div class="modal" id="dialogOKCancel">
+    <div class="modal-dialog">
+      <div class="modal-content">      
+        <!-- Modal Header -->
+        <div class="modal-header">
+          <h4 class="modal-title"></h4>
+          <button type="button" class="close">&times;</button>
+        </div>        
+        <!-- Modal body -->
+        <div class="modal-body">
+          <div></div>
+        </div>        
+        <!-- Modal footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn OK">{{ _('OK') }}</button>
+          <button type="button" class="btn btn-danger Cancel">{{ _('Abbrechen') }}</button>
+        </div>        
+      </div>
+    </div>
+  </div>
 {% endblock %}

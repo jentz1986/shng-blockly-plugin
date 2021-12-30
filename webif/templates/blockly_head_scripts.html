@@ -15,3 +15,16 @@
 {#   Web UI #}
 <link rel="stylesheet" href="static/shng_blockly.css">
 <script type="text/javascript" src="static/shng_blockly.js"></script>
+<script>
+    ShngBlockly_Constants.DefaultLogicTemplate = "<template>new";
+
+    ShngBlockly_Constants.ApiEndpointLoadLogic = "blockly_load_logic";
+    ShngBlockly_Constants.ApiEndpointSaveLogic = "blockly_save_logic";
+    ShngBlockly_Constants.ApiEndpointGetLogics = "blockly_get_logics";
+
+    ShngBlockly_Constants.DialogMessageCannotLoad = "Cannot load: "; // TODO: Translate
+    ShngBlockly_Constants.DialogMessageSuccessfullySaved = "Successfully saved"; //TODO: Translate
+    ShngBlockly_Constants.DialogMessageUnsavedChanges = "{{ _('Änderungen verwerfen?') }}";
+
+    ShngBlockly_Constants.TabHeaderPythonEditor = "{{ _('Python') }}";
+</script>

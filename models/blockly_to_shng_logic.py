@@ -41,14 +41,27 @@ class BlocklyToShngLogic():
     def get_blockly_logic_file_name(self, logic_name=None):
         self.logger.debug(
             f"get_blockly_logic_file_name: logic_name = '{logic_name}'")
+        original_logic_name = logic_name
+        if not logic_name:
+            logic_name = '<template>new'
 
-        if logic_name is None:
-            fn_xml = path.join(self.logics_template_dir_name, 'new.blockly')
+        if logic_name.startswith('<template>'):
+            load_from_directory = self.logics_template_dir_name
+            logic_name = logic_name[10:]
         else:
-            fn_xml = path.join(self.logics_directory_name,
-                               logic_name + '.blockly')
+            load_from_directory = self.logics_directory_name
+
+        sanitized_logic_name = self.__sanitize_file_name(logic_name)
+        fn_xml = path.join(load_from_directory,
+                           sanitized_logic_name + '.blockly')
+
+        if not path.exists(fn_xml):
+            self.logger.warning(
+                f"Logic does not exist: requested logic_name = '{original_logic_name}' filename '{fn_xml}'")
+            raise FileNotFoundError(logic_name)
+
         self.logger.debug(
-            f"get_blockly_logic_file_name: logic_name = '{logic_name}' -> '{fn_xml}'")
+            f"get_blockly_logic_file_name: logic_name = '{original_logic_name}' -> '{fn_xml}'")
         return fn_xml
 
     def save_logic(self, logic_name, python_code, blockly_xml):
@@ -84,7 +97,6 @@ class BlocklyToShngLogic():
         self.shng_logics_api.load_logic(section_name)
 
     def __parse_logic_header_from_blockly_xml_header(self, config_line):
-        self.logger.warning(f"CINE: {config_line}")
         section_name, file_name_info, logic_active_info, file_name_comment = config_line.split(
             '#')
 
@@ -99,7 +111,6 @@ class BlocklyToShngLogic():
         return (section_name, file_name, file_name_comment, logic_active)
 
     def __parse_trigger_header_from_blockly_xml_header(self, config_line):
-        self.logger.warning(f"TINE: {config_line}")
         section_name, file_name_info, trigger_info, trigger_comment = config_line.split(
             '#')
 
