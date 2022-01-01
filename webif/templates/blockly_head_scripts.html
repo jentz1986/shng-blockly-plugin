@@ -5,17 +5,10 @@
 <script type="text/javascript" src="static/blockly/python_compressed.js"></script>
 <script type="text/javascript" src="static/blockly/de.js"></script>
 <script type="text/javascript" src="static/blockly/en.js"></script>
-{#   SHNG to Blockly Integration #}
-<script type="text/javascript" src="static/shblocks/sh_items.js"></script>
-<script type="text/javascript" src="static/shblocks/sh_logics.js"></script>
-<script type="text/javascript" src="static/shblocks/sh_logic.js"></script>
-<script type="text/javascript" src="static/shblocks/sh_notify.js"></script>
-<script type="text/javascript" src="static/shblocks/sh_tools.js"></script>
-<script type="text/javascript" src="static/shblocks/sh_time.js"></script>
-{#   Web UI #}
-<link rel="stylesheet" href="static/shng_blockly.css">
-<script type="text/javascript" src="static/shng_blockly.js"></script>
+{# to support multi-language capabilities, these values are pre-set here, and then applied within the following JavaScript files #}
 <script>
+    var ShngBlockly_Constants = {};
+    
     ShngBlockly_Constants.DefaultLogicTemplate = "<template>new";
 
     ShngBlockly_Constants.ApiEndpointLoadLogic = "blockly_load_logic";
@@ -28,3 +21,13 @@
 
     ShngBlockly_Constants.TabHeaderPythonEditor = "{{ _('Python') }}";
 </script>
+{#   SHNG to Blockly Integration #}
+<script type="text/javascript" src="static/shblocks/sh_items.js"></script>
+<script type="text/javascript" src="static/shblocks/sh_logics.js"></script>
+<script type="text/javascript" src="static/shblocks/sh_notify.js"></script>
+<script type="text/javascript" src="static/shblocks/sh_tools.js"></script>
+<script type="text/javascript" src="static/shblocks/sh_time.js"></script>
+{#   Web UI #}
+<link rel="stylesheet" href="static/shng_blockly.css">
+<script type="text/javascript" src="static/shng_blockly.js"></script>
+

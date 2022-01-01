@@ -1,23 +1,21 @@
+from xml.dom import minidom
+
+
 class ShngItemsToBlockly():
 
     def __init__(self, sh_items_api):
         self.sh_items_api = sh_items_api
-
-
-    def get_hierarchy_as_xml_string(self):
-        mytree = self.__build_tree()
-        return mytree + "<sep>-</sep>\n"
-
+        self.xml_document_root = minidom.Document()
 
     def __remove_prefix(self, string, prefix):
         """
         Remove prefix from a string
-        
+
         :param string: String to remove the profix from
         :param prefix: Prefix to remove from string
         :type string: str
         :type prefix: str
-        
+
         :return: Strting with prefix removed
         :rtype: str
         """
@@ -25,59 +23,78 @@ class ShngItemsToBlockly():
             return string[len(prefix):]
         return string
 
+    def __create_node(self, tag, text=None, attributes_dict={}):
+        root_tag = self.xml_document_root.createElement(tag)
+        if text:
+            textNode = self.xml_document_root.createTextNode(text)
+            root_tag.appendChild(textNode)
+        for key in attributes_dict:
+            root_tag.setAttribute(key, attributes_dict[key])
 
-    def __build_tree(self):
-        # Get top level items
-        toplevelitems = []
-        allitems = sorted(self.sh_items_api.return_items(), key=lambda k: str.lower(k['_path']), reverse=False)
-        for item in allitems:
-            if item._path.find('.') == -1:
-                if item._path not in ['env_daily', 'env_init', 'env_loc', 'env_stat']:
-                    toplevelitems.append(item)
+        return root_tag
 
-        xml = '\n'
-        for item in toplevelitems:
-            xml += self.__build_treelevel(item)
-#        self.logger.info("log_tree #  xml -> '{}'".format(str(xml)))
-        return xml
-                
+    def __create_root_category(self):
+        root_items = filter(lambda i: i._path.find('.') == -1 and i._path not in ['env_daily', 'env_init', 'env_loc', 'env_stat'],
+                            sorted(self.sh_items_api.return_items(),
+                                   key=lambda k: str.lower(k['_path']), reverse=False))
+        root = self.__iterate_items(root_items, "SmartHomeNG Items")
+        root.appendChild(self.__create_node(
+            "block", "-", {"type": "sh_item_get"}))  # Blockly has issues with empty tags (<tag /> doesn't work, but <tag></tag>!)
+        root.appendChild(self.__create_node(
+            "block", "-", {"type": "sh_item_set"}))
+        root.appendChild(self.__create_node(
+            "block", "-", {"type": "sh_item_hasattr"}))
 
-    def __build_treelevel(self, item, parent='', level=0):
-        """
-        Builds one tree level of the items
-        
-        This methods calls itself recursively while there are further child items
-        """
-        childitems = sorted(item.return_children(), key=lambda k: str.lower(k['_path']), reverse=False)
+        return root
 
-        name = self.__remove_prefix(item._path, parent+'.')
-        if childitems != []:
-            xml = ''
-            if (item.type() != 'foo') or (item() != None):
-#                self.logger.info("item._path = '{}', item.type() = '{}', item() = '{}', childitems = '{}'".format(item._path, item.type(), str(item()), childitems))
-                xml += self.__build_leaf(name, item, level+1)
-                xml += ''.ljust(3*(level)) + '<category name="{0} ({1})">\n'.format(name, len(childitems)+1)
+    def __create_item_block(self, item, name):
+        block = self.__create_node("block", attributes_dict={
+            "type": "sh_item_obj", "name": item._path})
+        block.appendChild(self.__create_node(
+            "field", name, {"name": "N"}))
+        block.appendChild(self.__create_node(
+            "field", item._path, {"name": "P"}))
+        block.appendChild(self.__create_node(
+            "field", item.type(), {"name": "T"}))
+
+        return block
+
+    def __iterate_items(self, items, name, prefix_to_cut=""):
+        category = self.__create_node(
+            "category", attributes_dict={"name": name})
+
+        for item in items:
+            shortname = self.__remove_prefix(item.path(), prefix_to_cut + '.')
+            children = sorted(item.return_children(
+            ), key=lambda k: str.lower(k['_path']), reverse=False)
+            if len(children) > 0:
+                child_category = self.__iterate_items(
+                    children, shortname, item._path)
+                if child_category:
+                    if (item.type() != 'foo') or (item() != None):
+                        this_item = self.__create_item_block(item, shortname)
+                        if child_category.firstChild:
+                            child_category.insertBefore(
+                                this_item, child_category.firstChild)
+                        else:
+                            child_category.appendChild(this_item)
+                    if child_category.firstChild:
+                        count_of_child_blocks = sum(1 for _ in filter(
+                            lambda n: n.tagName == "block", child_category.childNodes))
+                    else:
+                        count_of_child_blocks = 0
+                    child_category.setAttribute(
+                        "name", f"{shortname} ({count_of_child_blocks})")
+                    category.appendChild(child_category)
             else:
-                xml += ''.ljust(3*(level)) + '<category name="{0} ({1})">\n'.format(name, len(childitems))
-            for grandchild in childitems:
-                xml += self.__build_treelevel(grandchild, item._path, level+1)
+                if (item.type() != 'foo') or (item() != None):
+                    category.appendChild(
+                        self.__create_item_block(item, shortname))
 
-            xml += ''.ljust(3*(level)) + '</category>  # name={}\n'.format(item._path)
-        else:
-            xml = self.__build_leaf(name, item, level)
-        return xml
+        if not category.firstChild:
+            return None
 
+        return category
 
-    def __build_leaf(self, name, item, level=0):
-        """
-        Builds the leaf information for an entry in the item tree
-        """
-#        n = item._path.title().replace('.','_')
-        n = item._path
-        xml = ''.ljust(3*(level)) + '<block type="sh_item_obj" name="' + name + '">\n'
-        xml += ''.ljust(3*(level+1)) + '<field name="N">' + n + '</field>>\n'
-        xml += ''.ljust(3*(level+1)) + '<field name="P">' + item._path + '</field>>\n'
-        xml += ''.ljust(3*(level+1)) + '<field name="T">' + item.type() + '</field>>\n'
-        xml += ''.ljust(3*(level)) + '</block>\n'
-        return xml
-        
+    def get_xml_string(self):
+        return self.__create_root_category().toprettyxml(indent="    ")

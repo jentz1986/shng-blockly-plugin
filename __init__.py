@@ -4,6 +4,7 @@
 # Copyright 2016-       Martin Sinn                         m.sinn@gmx.de
 #                       René Frieß                  rene.friess@gmail.com
 #                       Dirk Wallmeier                dirk@wallmeier.info
+# Extended  2021-       Jens Höppner                
 #########################################################################
 #  Blockly plugin for SmartHomeNG
 #
@@ -32,6 +33,7 @@ from lib.logic import Logics          # für update der /etc/logic.yaml
 from .webif import WebInterface
 from .models.shng_items_to_blockly import ShngItemsToBlockly
 from .models.blockly_to_shng_logic import BlocklyToShngLogic
+from .models.shng_plugin_functions_to_blockly import ShngPluginFunctionsToBlockly
 
 
 class Blockly(SmartPlugin):
@@ -55,6 +57,8 @@ class Blockly(SmartPlugin):
                                                         self._parameters.get(
                                                             'section_prefix', '')
                                                         )
+        
+        self.shng_plugin_functions_to_blockly = ShngPluginFunctionsToBlockly()
 
         if not self.init_webinterface(WebInterface):
             self.logger.error("Unable to start Webinterface")
@@ -66,10 +70,13 @@ class Blockly(SmartPlugin):
         """
         Run method for the plugin
         """
+        self.logger.debug("Run method called")
 
         # Logics API is not available when initializing the Plugin, but after run it is.
         self.blockly_to_shng_logic.shng_logics_api = Logics.get_instance()
-        self.logger.debug("Run method called")
+        self.shng_plugin_functions_to_blockly.build_plugin_functions_list()
+        # TODO: Do something with the plugin-functions-list
+        
         self.alive = True
 
     def stop(self):

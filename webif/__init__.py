@@ -64,7 +64,7 @@ class WebInterface(SmartPluginWebIf):
         cherrypy.lib.caching.expires(0)
 
         tmpl = self.tplenv.get_template('blockly.html')
-        return tmpl.render(dyn_sh_toolbox=self.items_model.get_hierarchy_as_xml_string(),
+        return tmpl.render(item_blocks=self.items_model.get_xml_string(),
                            cmd=self.cmd,
                            p=self.plugin,
                            timestamp=str(time.time()))
@@ -86,11 +86,20 @@ class WebInterface(SmartPluginWebIf):
     @cherrypy.expose
     def blockly_save_logic(self, py, xml, name):
         """ Save the logic - Saves the Blocky xml and the Python code """
-
         self.plugin.blockly_to_shng_logic.save_logic(logic_name=name,
                                                      python_code=py,
                                                      blockly_xml=xml)
 
     @cherrypy.expose
     def blockly_get_logics(self, uniq_param):
-        return json.dumps(self.plugin.blockly_to_shng_logic.get_blockly_logics())
+        logiken = json.dumps(self.plugin.blockly_to_shng_logic.get_blockly_logics())
+        self.logger.debug(logiken)
+        return logiken
+
+    @cherrypy.expose
+    def toolbox_items(self):
+        cherrypy.lib.caching.expires(0)
+        cherrypy.response.headers['Content-Type'] = 'text/xml'
+
+        tmpl = self.tplenv.get_template('toolbox_items.xml')
+        return tmpl.render(item_blocks=self.items_model.get_xml_string())

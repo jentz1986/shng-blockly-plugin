@@ -1,5 +1,3 @@
-var ShngBlockly_Constants = {};
-
 var ShngBlockly_Engine = {};
 
 ShngBlockly_Engine.blockly_workspace = null;
