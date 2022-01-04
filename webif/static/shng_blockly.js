@@ -1,3 +1,5 @@
+var ShngBlockly_Toolbox = { kind: "categoryToolbox", contents: [] }
+
 var ShngBlockly_Engine = {};
 
 ShngBlockly_Engine.blockly_workspace = null;
@@ -15,13 +17,11 @@ ShngBlockly_Engine.workspaceShouldBeSaved = function () {
 };
 
 ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
-    var toolboxtxt = document.getElementById("toolbox").outerHTML;
-    var toolboxXml = Blockly.Xml.textToDom(toolboxtxt);
-
     ShngBlockly_Engine.blockly_workspace = Blockly.inject(blockly_area_id, {
         grid: { spacing: 25, length: 3, colour: "#ccc", snap: true },
         media: "static/blockly/media/",
-        toolbox: toolboxXml,
+        // TODO: maxInstances: { "shng_logic_main": 1},
+        toolbox: ShngBlockly_Toolbox,
         zoom: { controls: true, wheel: true },
     });
 
@@ -38,6 +38,19 @@ ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
         },
         foldGutter: true,
         gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+    });
+};
+
+ShngBlockly_Engine.loadToolbox = function () {
+    var request = $.ajax({
+        url: ShngBlockly_Constants.ApiEndpointLoadToolbox,
+    });
+    request.done(function (response) {
+        ShngBlockly_Toolbox = response;
+        ShngBlockly_Engine.blockly_workspace.updateToolbox(ShngBlockly_Toolbox);
+    });
+    request.fail(function (jqXHR, txtStat) {
+        ShngBlockly_UI.dialogErrorOK(ShngBlockly_Constants.DialogMessageCannotLoad + " Toolbox");
     });
 };
 
@@ -158,26 +171,20 @@ ShngBlockly_UI.renderContentIntoLoadLogicDialog = function (logicList) {
     $("#logicList").empty();
     logicList.forEach((logic) => {
         $("#logicList").append(
-            "<button onclick=\"ShngBlockly_UI.performUpdateBlocks('" +
-                logic +
-                '\')" class="btn btn-shng btn-sm">' +
-                logic +
-                "</button>"
+            "<button onclick=\"ShngBlockly_UI.performUpdateBlocks('" + logic + '\')" class="btn btn-shng btn-sm">' + logic + "</button>"
         );
     });
 };
 
 ShngBlockly_UI.init = function () {
-    window.onbeforeunload = function () {
-        window.addEventListener("beforeunload", function (e) {
-            if (ShngBlockly_Engine.workspaceShouldBeSaved()) {
-                e["returnValue"] = ShngBlockly_Constants.DialogMessageUnsavedChanges;
-            } else {
-                // the absence of a returnValue property on the event will guarantee the browser unload happens
-                delete e["returnValue"];
-            }
-        });
-    };
+    window.addEventListener("beforeunload", function (e) {
+        if (ShngBlockly_Engine.workspaceShouldBeSaved()) {
+            e["returnValue"] = ShngBlockly_Constants.DialogMessageUnsavedChanges;
+        } else {
+            // the absence of a returnValue property on the event will guarantee the browser unload happens
+            delete e["returnValue"];
+        }
+    });
 
     $(".nav-tabs a").on("shown.bs.tab", function (event) {
         var x = $(event.target).text();
@@ -209,3 +216,5 @@ $(document).ready(function () {
      */
     ShngBlockly_Engine.loadBlocks();
 });
+
+ShngBlockly_Engine.loadToolbox();

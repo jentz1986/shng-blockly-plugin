@@ -53,7 +53,7 @@ class WebInterface(SmartPluginWebIf):
         self.logger = plugin.logger
         self.webif_dir = webif_dir
         self.plugin = plugin
-        self.items_model = self.plugin.shng_items_to_blockly
+        self.blocks_factory = self.plugin.blocks_factory
 
         self.logger.info('Blockly Webif.__init__')
 
@@ -64,8 +64,7 @@ class WebInterface(SmartPluginWebIf):
         cherrypy.lib.caching.expires(0)
 
         tmpl = self.tplenv.get_template('blockly.html')
-        return tmpl.render(item_blocks=self.items_model.get_xml_string(),
-                           cmd=self.cmd,
+        return tmpl.render(cmd=self.cmd,
                            p=self.plugin,
                            timestamp=str(time.time()))
 
@@ -92,14 +91,17 @@ class WebInterface(SmartPluginWebIf):
 
     @cherrypy.expose
     def blockly_get_logics(self, uniq_param):
-        logiken = json.dumps(self.plugin.blockly_to_shng_logic.get_blockly_logics())
-        self.logger.debug(logiken)
-        return logiken
+        cherrypy.response.headers['Content-Type'] = 'text/json'
+        return json.dumps(self.plugin.blockly_to_shng_logic.get_blockly_logics())
 
     @cherrypy.expose
-    def toolbox_items(self):
-        cherrypy.lib.caching.expires(0)
+    def toolbox_xml(self):
         cherrypy.response.headers['Content-Type'] = 'text/xml'
+        return self.blocks_factory.get_toolbox_xml_string()
 
-        tmpl = self.tplenv.get_template('toolbox_items.xml')
-        return tmpl.render(item_blocks=self.items_model.get_xml_string())
+    @cherrypy.expose
+    def toolbox_json(self, pretty=False):
+        cherrypy.response.headers['Content-Type'] = 'text/json'
+        if pretty:
+            return json.dumps(self.blocks_factory.get_toolbox_dict_for_json(), indent=4)
+        return json.dumps(self.blocks_factory.get_toolbox_dict_for_json())

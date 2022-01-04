@@ -40,12 +40,6 @@
             <block type="shtools_fetchurl"></block>
             <block type="shtools_fetchurl2"></block>
         </category>
-        <category name="Notification">
-            <block type="shnotify_email"></block>
-            <block type="shnotify_prowl"></block>
-            <block type="shnotify_nma"></block>
-            <block type="shnotify_pushbullit"></block>
-        </category>
     </category>
     <sep gap="8"></sep>
     <category name="Logic">

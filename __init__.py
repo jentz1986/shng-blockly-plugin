@@ -27,13 +27,11 @@
 
 
 from lib.model.smartplugin import SmartPlugin
-from lib.item import Items
 from lib.logic import Logics          # für update der /etc/logic.yaml
 
 from .webif import WebInterface
-from .models.shng_items_to_blockly import ShngItemsToBlockly
+from .models.shng_blocks_factory import ShngBlockFactory
 from .models.blockly_to_shng_logic import BlocklyToShngLogic
-from .models.shng_plugin_functions_to_blockly import ShngPluginFunctionsToBlockly
 
 
 class Blockly(SmartPlugin):
@@ -49,7 +47,7 @@ class Blockly(SmartPlugin):
         super().__init__()
 
         # Model to prepare Dynamic XML from Items for Blockly
-        self.shng_items_to_blockly = ShngItemsToBlockly(Items.get_instance())
+        self.blocks_factory = ShngBlockFactory()
 
         # Model to provide interface to SHNG-Logics files and API
         self.blockly_to_shng_logic = BlocklyToShngLogic(self.logger,
@@ -58,8 +56,6 @@ class Blockly(SmartPlugin):
                                                             'section_prefix', '')
                                                         )
         
-        self.shng_plugin_functions_to_blockly = ShngPluginFunctionsToBlockly()
-
         if not self.init_webinterface(WebInterface):
             self.logger.error("Unable to start Webinterface")
             self._init_complete = False
@@ -74,8 +70,6 @@ class Blockly(SmartPlugin):
 
         # Logics API is not available when initializing the Plugin, but after run it is.
         self.blockly_to_shng_logic.shng_logics_api = Logics.get_instance()
-        self.shng_plugin_functions_to_blockly.build_plugin_functions_list()
-        # TODO: Do something with the plugin-functions-list
         
         self.alive = True
 

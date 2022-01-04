@@ -42,7 +42,6 @@ Blockly.Blocks["sh_item_obj"] = {
 Blockly.Python["sh_item_obj"] = function (block) {
     var iPath = block.getFieldValue("P");
     var code = iPath;
-    // TODO: Change ORDER_NONE to the correct strength. <- Still neccessary?
     return [code, Blockly.Python.ORDER_ATOMIC];
 };
 

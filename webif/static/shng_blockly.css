@@ -13,3 +13,7 @@ div.CodeMirror {
   width: 100%;
   height: calc(100vh - 260px);
 }
+
+xml {
+  display: none;
+}
