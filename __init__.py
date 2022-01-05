@@ -30,7 +30,6 @@ from lib.model.smartplugin import SmartPlugin
 from lib.logic import Logics          # für update der /etc/logic.yaml
 
 from .webif import WebInterface
-from .models.shng_blocks_factory import ShngBlockFactory
 from .models.blockly_to_shng_logic import BlocklyToShngLogic
 
 
@@ -45,9 +44,6 @@ class Blockly(SmartPlugin):
     def __init__(self, sh):
         # Call init code of parent class (SmartPlugin)
         super().__init__()
-
-        # Model to prepare Dynamic XML from Items for Blockly
-        self.blocks_factory = ShngBlockFactory()
 
         # Model to provide interface to SHNG-Logics files and API
         self.blockly_to_shng_logic = BlocklyToShngLogic(self.logger,

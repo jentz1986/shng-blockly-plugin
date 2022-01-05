@@ -200,8 +200,7 @@ ShngBlockly_UI.init = function () {
             async: false,
             data: { uniq_param: new Date().getTime() },
             success: function (response) {
-                loadedLogics = JSON.parse(response);
-                ShngBlockly_UI.renderContentIntoLoadLogicDialog(loadedLogics);
+                ShngBlockly_UI.renderContentIntoLoadLogicDialog(response.logics);
             },
         });
     });

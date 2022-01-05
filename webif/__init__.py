@@ -34,6 +34,8 @@ from cherrypy.lib.static import serve_file
 
 from lib.model.smartplugin import SmartPluginWebIf
 
+from ..models.shng_blocks_factory import ShngBlockFactory
+
 
 class WebInterface(SmartPluginWebIf):
 
@@ -53,25 +55,28 @@ class WebInterface(SmartPluginWebIf):
         self.logger = plugin.logger
         self.webif_dir = webif_dir
         self.plugin = plugin
-        self.blocks_factory = self.plugin.blocks_factory
+
+        def __translate(txt, vars={}):
+            return self.plugin.translate(txt, vars)
+        self.blocks_factory = ShngBlockFactory(__translate)
 
         self.logger.info('Blockly Webif.__init__')
 
         self.tplenv = self.init_template_environment()
 
-    @cherrypy.expose
+    @ cherrypy.expose
     def index(self, reload=None):
         cherrypy.lib.caching.expires(0)
 
-        tmpl = self.tplenv.get_template('blockly.html')
+        tmpl = self.tplenv.get_template('index.html')
         return tmpl.render(cmd=self.cmd,
                            p=self.plugin,
                            timestamp=str(time.time()))
 
-    @cherrypy.expose
+    @ cherrypy.expose
     def blockly_load_logic(self, uniq_param, logic_name):
         """
-        the uniq-param is used to unify the request from jquery-side, 
+        the uniq-param is used to unify the request from jquery-side,
         if the parameter is deleted here, the call will fail
         """
         try:
@@ -92,7 +97,7 @@ class WebInterface(SmartPluginWebIf):
     @cherrypy.expose
     def blockly_get_logics(self, uniq_param):
         cherrypy.response.headers['Content-Type'] = 'text/json'
-        return json.dumps(self.plugin.blockly_to_shng_logic.get_blockly_logics())
+        return json.dumps({"logics": self.plugin.blockly_to_shng_logic.get_blockly_logics()}, sort_keys=True)
 
     @cherrypy.expose
     def toolbox_xml(self):

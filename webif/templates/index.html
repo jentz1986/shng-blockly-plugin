@@ -9,7 +9,32 @@
 {% set start_tab = 1 %}
 
 {% block pluginscripts %}
-  {% include "blockly_head_scripts.html" %}
+<link rel="stylesheet" href="static/blockly/style.css">
+<script type="text/javascript" src="static/blockly/blockly_compressed.js"></script>
+<script type="text/javascript" src="static/blockly/blocks_compressed.js"></script>
+<script type="text/javascript" src="static/blockly/python_compressed.js"></script>
+<script type="text/javascript" src="static/blockly/{{ _('LANGUAGE_LOCALE') }}.js"></script>
+{# to support multi-language capabilities, these values are pre-set here, and then applied within the following JavaScript files #}
+<script>
+    var ShngBlockly_Constants = {};    
+    ShngBlockly_Constants.DefaultLogicTemplate = "<template>new";
+    ShngBlockly_Constants.ApiEndpointLoadLogic = "blockly_load_logic";
+    ShngBlockly_Constants.ApiEndpointSaveLogic = "blockly_save_logic";
+    ShngBlockly_Constants.ApiEndpointGetLogics = "blockly_get_logics";
+    ShngBlockly_Constants.ApiEndpointLoadToolbox = "toolbox_json";
+    ShngBlockly_Constants.DialogMessageCannotLoad = "{{ _('Cannot load: ') }}";
+    ShngBlockly_Constants.DialogMessageSuccessfullySaved = "{{ _('Successfully saved') }}";
+    ShngBlockly_Constants.DialogMessageUnsavedChanges = "{{ _('Änderungen verwerfen?') }}";
+    ShngBlockly_Constants.TabHeaderPythonEditor = "{{ _('Python') }}";
+</script>
+{#   SHNG to Blockly Integration #}
+<script type="text/javascript" src="static/shblocks/sh_items.js"></script>
+<script type="text/javascript" src="static/shblocks/sh_logics.js"></script>
+<script type="text/javascript" src="static/shblocks/sh_tools.js"></script>
+<script type="text/javascript" src="static/shblocks/sh_time.js"></script>
+{#   Web UI #}
+<link rel="stylesheet" href="static/shng_blockly.css">
+<script type="text/javascript" src="static/shng_blockly.js"></script>
 {% endblock pluginscripts %}
 
 {% block headtable %}{% endblock headtable %}

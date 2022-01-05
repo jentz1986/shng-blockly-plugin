@@ -23,6 +23,61 @@ plugin_translations:
     "Abbrechen":
         de: "="
         en: "Cancel"
+    "Cannot load: ":
+        de: "Kann nicht laden: "
+        en: "="
+    "Successfully saved":
+        de: "Erfolgreich gespeichert!"
+        en: "="
     "Änderungen verwerfen?":
         de: "="
         en: "Ignore changes?"
+    "LANGUAGE_LOCALE":
+        de: "de"
+        en: "en"
+
+    "Variables":
+        de: "Variablen"
+        en: "="
+    "Functions":
+        de: "Funktionen"
+        en: "="
+    "SmartHomeNG Logic":
+        de: "Logik und Trigger"
+        en: "Logic and Trigger"
+    "SmartHomeNG Tools":
+        de: "="
+        en: "="
+    "Time":
+        de: "Zeit"
+        en: "="
+    "Tools":
+        de: "Tools"
+        en: "="
+    "SmartHomeNG Plugin-Functions":
+        de: "PlugIn-Funktionen"
+        en: "="
+    "SmartHomeNG Items":
+        de: "Items"
+        en: "="
+    "IfElse":
+        de: "Wenn, dann"
+        en: "if, then"
+    "Boolean":
+        de: "Aussagenlogik"
+        en: "="
+    "Loops":
+        de: "Schleifen"
+        en: "="
+    "Math":
+        de: "Rechnen"
+        en: "="
+    "Text":
+        de: "="
+        en: "="
+    "Lists":
+        de: "Listen"
+        en: "="
+    "Colours":
+        de: "Farben"
+        en: "="
