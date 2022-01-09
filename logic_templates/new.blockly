@@ -1,25 +1,26 @@
-<xml xmlns="http://www.w3.org/1999/xhtml">
-    <block type="sh_logic_main" id="yJ,/r2c}j_py}8)^mnbT" x="88" y="213">
-        <field name="LOGIC_NAME">new</field>
-        <field name="ACTIVE">FALSE</field>
-        <field name="COMMENT">Vorlage für eine neue Logik</field>
-        <data>sh_logic_main</data>
-        <statement name="DO">
-            <block type="sh_trigger_init" id="8|1!xi.4.REpSuf=(*{J">
-                <field name="NAME">Init</field>
-                <field name="COMMENT">Trigger Beispiel: Bei der Initialisierung auslösen</field>
-                <data>sh_trigger_init</data>
-                <next>
-                    <block type="shtools_logger" id="a8*1qul2)(Q):S/A9K5N">
-                        <field name="LOGLEVEL">WARNING</field>
-                        <value name="LOGTEXT">
-                            <block type="text" id="^~^9|6:*L9rnepuCM%Ol">
-                                <field name="TEXT">Beispiel: Logeintrag der Logik</field>
-                            </block>
-                        </value>
-                    </block>
-                </next>
-            </block>
-        </statement>
-    </block>
+<?xml version="1.0" ?>
+<xml xmlns="https://developers.google.com/blockly/xml">
+	<block deletable="false" id="`rL,P#2gWIN?0%yHq.l1" type="sh_logic_main" x="-1688" y="-287">
+		<field name="LOGIC_NAME">new_logic</field>
+		<field name="ACTIVE">TRUE</field>
+		<field name="COMMENT">Kommentar</field>
+		<data>sh_logic_main</data>
+		<statement name="TRIGGERS">
+			<block id="yR::uG][s}mfe]7}bypH" type="sh_trigger_init">
+				<field name="NAME">Init</field>
+				<field name="COMMENT"/>
+				<data>sh_trigger_init</data>
+			</block>
+		</statement>
+		<statement name="DO">
+			<block id="XA6U:E5z%n4Xwuh4+]|F" type="shtools_logger">
+				<field name="LOGLEVEL">DEBUG</field>
+				<value name="LOGTEXT">
+					<block id="DW0LyOz6XZTxg]!_v]*:" type="text">
+						<field name="TEXT">I am Alive</field>
+					</block>
+				</value>
+			</block>
+		</statement>
+	</block>
 </xml>

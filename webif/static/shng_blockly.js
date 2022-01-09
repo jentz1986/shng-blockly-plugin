@@ -1,4 +1,4 @@
-var ShngBlockly_Toolbox = { kind: "categoryToolbox", contents: [] }
+var ShngBlockly_Toolbox = { kind: "categoryToolbox", contents: [] };
 
 var ShngBlockly_Engine = {};
 
@@ -20,7 +20,7 @@ ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
     ShngBlockly_Engine.blockly_workspace = Blockly.inject(blockly_area_id, {
         grid: { spacing: 25, length: 3, colour: "#ccc", snap: true },
         media: "static/blockly/media/",
-        // TODO: maxInstances: { "shng_logic_main": 1},
+        maxInstances: { sh_logic_main: 1, sh_trigger_block: 1 },
         toolbox: ShngBlockly_Toolbox,
         zoom: { controls: true, wheel: true },
     });
@@ -110,7 +110,7 @@ ShngBlockly_UI = {};
 ShngBlockly_UI.checkUnsavedChangesBefore = function (onOK) {
     if (ShngBlockly_Engine.workspaceShouldBeSaved()) {
         onCancel = function () {};
-        ShngBlockly_UI.dialogOKCancel(ShngBlockly_Constants.DialogMessageUnsavedChanges, onOK, onCancel);
+        ShngBlockly_UI.showDialog(ShngBlockly_Constants.DialogMessageUnsavedChanges, ShngBlockly_Constants.DialogMessageAreYouSure, onOK, onCancel);
         return;
     } else {
         onOK();
@@ -129,50 +129,67 @@ ShngBlockly_UI.actionSave = function () {
 
 ShngBlockly_UI.actionLoad = function () {
     ShngBlockly_UI.checkUnsavedChangesBefore(function () {
-        $("#loadLogicDialog").modal("show");
+        ShngBlockly_UI.showLoadLogicDialog();
     });
 };
 
 ShngBlockly_UI.performUpdateBlocks = function (logicName) {
     ShngBlockly_Engine.loadBlocks(logicName);
-    $("#loadLogicDialog").modal("hide");
+    $("#genericModal").modal("hide");
+};
+
+ShngBlockly_UI.showDialog = function (content, caption = "", onOK = null, onCancel = null) {
+    if (onOK != null) {
+        wrappedOnOK = function () {
+            onOK();
+            $("#genericModal").modal("hide");
+        };
+        $("#genericModal .modal-footer button.OK").unbind().click(wrappedOnOK);
+        $("#genericModal .modal-header button.close").unbind().click(wrappedOnOK);
+        $("#genericModal .modal-footer button.OK").show();
+    } else {
+        $("#genericModal .modal-footer button.OK").hide();
+    }
+    if (onCancel != null) {
+        wrappedOnCncl = function () {
+            onCancel();
+            $("#genericModal").modal("hide");
+        };
+        $("#genericModal .modal-footer button.Cancel").unbind().click(wrappedOnCncl);
+        $("#genericModal .modal-header button.close").unbind().click(wrappedOnCncl);
+        $("#genericModal .modal-footer button.Cancel").show();
+    } else {
+        $("#genericModal .modal-footer button.Cancel").hide();
+    }
+    $("#genericModal .modal-header h4").html(caption);
+    $("#genericModal .modal-body div").html(content);
+
+    $("#genericModal").modal("show");
 };
 
 ShngBlockly_UI.dialogOK = function (message) {
-    $("#dialogOK .modal-header h4").html("Info"); // TODO: Übersetzen
-    $("#dialogOK .modal-body div").html(message);
-    $("#dialogOK").modal("show");
+    ShngBlockly_UI.showDialog(message, "Info", function () {}); // TODO: Übersetzen
 };
 
 ShngBlockly_UI.dialogErrorOK = function (message) {
-    $("#dialogOK .modal-header h4").html("Error"); // TODO: Übersetzen
-    $("#dialogOK .modal-body div").html(message);
-    $("#dialogOK").modal("show");
+    ShngBlockly_UI.showDialog(message, "ERROR", function () {}); // TODO: Übersetzen
 };
 
-ShngBlockly_UI.dialogOKCancel = function (message, onOK, onCancel) {
-    wrappedOnOK = function () {
-        onOK();
-        $("#dialogOKCancel").modal("hide");
-    };
-    wrappedOnCncl = function () {
-        onCancel();
-        $("#dialogOKCancel").modal("hide");
-    };
-    $("#dialogOKCancel .modal-header h4").html("Error"); // TODO: Übersetzen
-    $("#dialogOKCancel .modal-header button.close").unbind().click(wrappedOnCncl);
-    $("#dialogOKCancel .modal-body div").html(message);
-    $("#dialogOKCancel .modal-footer button.OK").unbind().click(wrappedOnOK);
-    $("#dialogOKCancel .modal-footer button.Cancel").unbind().click(wrappedOnCncl);
-    $("#dialogOKCancel").modal("show");
-};
-
-ShngBlockly_UI.renderContentIntoLoadLogicDialog = function (logicList) {
-    $("#logicList").empty();
-    logicList.forEach((logic) => {
-        $("#logicList").append(
-            "<button onclick=\"ShngBlockly_UI.performUpdateBlocks('" + logic + '\')" class="btn btn-shng btn-sm">' + logic + "</button>"
-        );
+ShngBlockly_UI.showLoadLogicDialog = function () {
+    ShngBlockly_UI.showDialog('<div id="logicList"></div>', ShngBlockly_Constants.DialogMessageLoadLogicHead, null, function () {});
+    $.ajax({
+        url: ShngBlockly_Constants.ApiEndpointGetLogics,
+        type: "GET",
+        async: false,
+        data: { uniq_param: new Date().getTime() },
+        success: function (response) {
+            $("#logicList").empty();
+            response.logics.forEach((logic) => {
+                $("#logicList").append(
+                    "<button onclick=\"ShngBlockly_UI.performUpdateBlocks('" + logic + '\')" class="btn btn-shng btn-sm">' + logic + "</button>"
+                );
+            });
+        },
     });
 };
 
@@ -192,18 +209,6 @@ ShngBlockly_UI.init = function () {
             ShngBlockly_Engine.refreshPython();
         }
     });
-
-    $("#loadLogicDialog").on("show.bs.modal", function () {
-        $.ajax({
-            url: ShngBlockly_Constants.ApiEndpointGetLogics,
-            type: "GET",
-            async: false,
-            data: { uniq_param: new Date().getTime() },
-            success: function (response) {
-                ShngBlockly_UI.renderContentIntoLoadLogicDialog(response.logics);
-            },
-        });
-    });
 };
 
 $(document).ready(function () {
@@ -214,6 +219,14 @@ $(document).ready(function () {
      * TODO: Read Parameter from UI to identify logic to be loaded
      */
     ShngBlockly_Engine.loadBlocks();
+
+    $("body").append(
+        '<div class="modal" id="genericModal"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4 class="modal-title"></h4><button type="button" class="close">&times;</button></div><div class="modal-body"><div></div></div><div class="modal-footer"><button type="button" class="btn OK">' +
+            ShngBlockly_Constants.OKText +
+            '</button><button type="button" class="btn btn-danger Cancel">' +
+            ShngBlockly_Constants.CancelText +
+            "</button></div></div></div></div>"
+    );
 });
 
 ShngBlockly_Engine.loadToolbox();

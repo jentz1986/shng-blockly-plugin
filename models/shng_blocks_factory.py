@@ -1,3 +1,4 @@
+import json
 from xml.dom.minidom import Element, Document
 from lib.model.smartplugin import SmartPlugin
 from lib.plugin import Plugins
@@ -34,7 +35,7 @@ class BlocklyField():
     def get_xml(self, document) -> Element:
         ele = document.createElement("field")
         ele.setAttribute("name", self.name)
-        textNode = document.createTextNode(self.content)
+        textNode = document.createTextNode(str(self.content))
         ele.appendChild(textNode)
         return ele
 
@@ -71,6 +72,71 @@ class BlocklyMutation():
         return start + '></mutation>'
 
 
+class BlocklyShadow():
+
+    def __init__(self, block_type):
+        self.block_type = block_type
+        self.values = None
+        self.fields = None
+        self.mutations = None
+
+    def add_value(self, name):
+        if self.values is None:
+            self.values = []
+        val = BlocklyValue(name)
+        self.values.append(val)
+        return val
+
+    def add_field(self, name, value, class_=None) -> BlocklyField:
+        if self.fields is None:
+            self.fields = []
+        val = BlocklyField(name, value, class_)
+        self.fields.append(val)
+        return val
+
+    def add_mutation(self, mutators_list) -> BlocklyMutation:
+        if self.mutations is None:
+            self.mutations = []
+        val = BlocklyMutation(mutators_list)
+        self.mutations.append(val)
+        return val
+
+    def get_xml(self, document) -> Element:
+        ele = document.createElement("shadow")
+        ele.setAttribute("type", self.block_type)
+        if not(self.fields) and not(self.values) and not(self.mutations):
+            textNode = document.createTextNode("-")
+            ele.appendChild(textNode)
+        if self.fields:
+            for field in self.fields:
+                ele.appendChild(field.get_xml(document))
+        if self.values:
+            for value in self.values:
+                ele.appendChild(value.get_xml(document))
+        if self.mutations:
+            for mutation in self.mutations:
+                ele.appendChild(mutation.get_xml(document))
+        return ele
+
+    def get_dict_for_json(self) -> dict:
+        raise NotImplementedError(
+            "Blockly does not support parsing values from JSON yet")
+
+    def __repr__(self) -> str:
+        start = f'<shadow type="{self.block_type}">'
+        if self.values:
+            for block in self.values:
+                start += repr(block)
+        if self.fields:
+            for cat in self.fields:
+                start += repr(cat)
+        if self.mutations:
+            for cat in self.mutations:
+                start += repr(cat)
+        start += '</shadow>'
+        return start
+
+
 class BlocklyValue():
 
     def __init__(self, name):
@@ -83,6 +149,13 @@ class BlocklyValue():
             self.blocks = []
         self.blocks.append(block)
         return block
+
+    def add_shadow(self, primitive_type) -> BlocklyField:
+        shadow = BlocklyShadow(primitive_type)
+        if self.blocks is None:
+            self.blocks = []
+        self.blocks.append(shadow)
+        return shadow
 
     def get_xml(self, document) -> Element:
         ele = document.createElement("value")
@@ -347,38 +420,148 @@ class ShngItemsToBlockly():
 
 class ShngPluginFunctionsToBlockly():
 
-    def __init__(self, root_name):
+    def __init__(self, root_name, language='en'):
         self.plugins = None
         self.__root_name = root_name
-        self.plugin_functions_list = []
+        self.plugin_functions = {}
+        self.param_types = set()
+        self.language = language
+
+    def __simplify_types_for_blockly(self, raw_type: str, name: str = None):
+        if raw_type == "bool":
+            return "Boolean"
+        if raw_type.startswith("list"):
+            return "Array"
+        if raw_type.startswith("dict"):
+            return "Array"
+        if raw_type == "int":
+            return "Number"
+        if raw_type == "num":
+            return "Number"
+        if raw_type == "str":
+            return "String"
+        if raw_type == "mac":
+            return "String"
+        if raw_type == "knx_ga":
+            return "String"
+        if raw_type == "void":
+            return "void"
+        if name:
+            if "item" in name.lower() and raw_type == "foo":
+                return "shItemType"
+        return "foo"
+
+    def __get_function_params_info(self, func_param_yaml):
+        if not (func_param_yaml is None):
+            for par in func_param_yaml:
+                p_name = str(par)
+                p_type = None
+                p_default = None
+                if func_param_yaml[par].get('type', None) != None:
+                    p_type = str(func_param_yaml[par].get('type', None))
+                    self.param_types.add(p_type)
+                if func_param_yaml[par].get('default', None) != None:
+                    p_default = str(
+                        func_param_yaml[par].get('default', None))
+                    if func_param_yaml[par].get('type', 'foo') == 'str':
+                        if p_default == 'None*':
+                            p_default = 'None'
+                        else:
+                            p_default = p_default
+                yield {"p_name": p_name, "p_type_raw": p_type, "p_type": self.__simplify_types_for_blockly(p_type, p_name), "p_default": p_default}
+
+    def __build_plugin_function_info(self, metadata_info):
+        # Stolen from lib/metadata.py#L196...
+        if metadata_info.plugin_functions is not None:
+            for f in sorted(metadata_info.plugin_functions):
+                func_param_yaml = metadata_info.plugin_functions[f].get(
+                    'parameters', None)
+                f_type = metadata_info.plugin_functions[f].get(
+                    'type', 'void')
+                f_descr = metadata_info.plugin_functions[f].get(
+                    'description', None)
+
+                params = self.__get_function_params_info(func_param_yaml)
+
+                yield {"m_name": f, "m_description": f_descr,
+                       "m_pars": list(params), "m_ret_type_raw": f_type,
+                       "m_ret_type": self.__simplify_types_for_blockly(f_type)}
 
     def __build_plugin_functions_list(self):
-        # Duplicate of /modules/admin/api_plugins.py#L500-L519 rf. https://github.com/smarthomeNG/smarthome/blob/301e4968483079098b01f1e6853c9f358ca6f552/modules/admin/api_plugins.py#L500-L519
-        if self.plugins == None:
+        # Stolen from /modules/admin/api_plugins.py#L500-L519 rf. https://github.com/smarthomeNG/smarthome/blob/301e4968483079098b01f1e6853c9f358ca6f552/modules/admin/api_plugins.py#L500-L519
+        if self.plugins is None:
             self.plugins = Plugins.get_instance()
         self.plugin_functions_list = []
         for x in self.plugins.return_plugins():
             if isinstance(x, SmartPlugin):
                 plugin_config_name = x.get_configname()
                 if x.metadata is not None:
-                    api = x.metadata.get_plugin_function_defstrings(
-                        with_type=True, with_default=True)
-                    if api is not None:
-                        for function in api:
-                            self.plugin_functions_list.append(
-                                plugin_config_name + "." + function)
+                    functions_infos = list(
+                        self.__build_plugin_function_info(x.metadata))
+                    if len(functions_infos) > 0:
+                        self.plugin_functions[plugin_config_name] = []
+                        for function in functions_infos:
+                            self.plugin_functions[plugin_config_name].append(
+                                function)
+
+    def __assign_default_value_for_parameter_as_shadow(self, input_value, param):
+        if param["p_type"] == "Boolean":
+            shadow = input_value.add_shadow("logic_boolean")
+            if param['p_default']:
+                pass
+        elif param["p_type"] == "Array":
+            shadow = input_value.add_shadow("lists_create_empty")
+            if param['p_default']:
+                pass
+        elif param["p_type"] == "Number":
+            shadow = input_value.add_shadow("math_number")
+            if param['p_default']:
+                shadow.add_field("NUM", param['p_default'])
+        elif param["p_type"] == "String":
+            shadow = input_value.add_shadow("text")
+            if param['p_default']:
+                shadow.add_field("TEXT", param['p_default'])
 
     def __create_root_category(self) -> BlocklyCategory:
-        category = BlocklyCategory(self.__root_name)
-        return category
+        self.__build_plugin_functions_list()
+        root_cat = BlocklyCategory(self.__root_name)
+        for plugin in self.plugin_functions:
+            plugin_category = root_cat.add_category(plugin)
+            plugin_category.add_block("shng_function_return_ignorer")
+            for function in self.plugin_functions[plugin]:
+                new_block = plugin_category.add_block("shng_plugin_function")
+                new_block.add_field("PO_NAME", plugin)  # which plugin-object
+                new_block.add_field(
+                    "M_NAME", function["m_name"])  # which method?
+                tool_tip_text = ''
+                if function["m_description"]:
+                    tool_tip_text = function["m_description"].get(
+                        self.language, '')
+                    if not tool_tip_text:
+                        tool_tip_text = function["m_description"].get('en', '')
+                new_block.add_field("M_DESC", tool_tip_text)
+                new_block.add_field("P_COUNT", len(function["m_pars"]))
+                for index, param in enumerate(function["m_pars"], 1):
+                    input_value = new_block.add_value(f"PARAM{index}")
+                    self.__assign_default_value_for_parameter_as_shadow(
+                        input_value, param)
+                    new_block.add_field(f"P{index}_NAME", param["p_name"])
+                    new_block.add_field(f"P{index}_TYPE", param["p_type"])
+                    new_block.add_field(
+                        f"P{index}_TYPE_RAW", param["p_type_raw"])
+                    new_block.add_field(
+                        f"P{index}_DEFAULT", param["p_default"])
+                new_block.add_field("M_RET_TYPE", function["m_ret_type"])
+                new_block.add_field(
+                    "M_RET_TYPE_RAW", function["m_ret_type_raw"])
+
+        return root_cat
 
     def get_xml(self, document: Document) -> Element:
-        self.__build_plugin_functions_list()
         root_cat = self.__create_root_category()
         return root_cat.get_xml(document)
 
     def get_dict_for_json(self) -> dict:
-        self.__build_plugin_functions_list()
         root_cat = self.__create_root_category()
         ret_dict = root_cat.get_dict_for_json()
         return ret_dict
@@ -409,12 +592,12 @@ class ShngBlockFactory():
 
     def __get_blocks_shng_logic(self) -> BlocklyCategory:
         root_cat = BlocklyCategory(self.translate("SmartHomeNG Logic"))
-        root_cat.add_block("sh_logic_main")
         root_cat.add_block("sh_trigger_item").add_value("TRIG_ITEM")
         root_cat.add_block("sh_trigger_cycle")
         root_cat.add_block("sh_trigger_sun")
         root_cat.add_block("sh_trigger_daily")
         root_cat.add_block("sh_trigger_init")
+        root_cat.add_block("sh_logic_main")
         return root_cat
 
     def __get_blocks_shng_tools(self) -> BlocklyCategory:
@@ -442,7 +625,8 @@ class ShngBlockFactory():
     def __get_blocks_shng_plugin_functions(self) -> BlocklyCategory:
         if self.__plugin_functions_to_blocks is None:
             self.__plugin_functions_to_blocks = ShngPluginFunctionsToBlockly(
-                self.translate("SmartHomeNG Plugin-Functions"))
+                self.translate("SmartHomeNG Plugin-Functions"),
+                self.translate("LANGUAGE_LOCALE"))
         return self.__plugin_functions_to_blocks
 
     def __get_blocks_shng_items(self) -> BlocklyCategory:

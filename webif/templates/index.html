@@ -24,14 +24,19 @@
     ShngBlockly_Constants.ApiEndpointLoadToolbox = "toolbox_json";
     ShngBlockly_Constants.DialogMessageCannotLoad = "{{ _('Cannot load: ') }}";
     ShngBlockly_Constants.DialogMessageSuccessfullySaved = "{{ _('Successfully saved') }}";
+    ShngBlockly_Constants.DialogMessageAreYouSure = "{{ _('Bist Du sicher?') }}";
     ShngBlockly_Constants.DialogMessageUnsavedChanges = "{{ _('Änderungen verwerfen?') }}";
+    ShngBlockly_Constants.DialogMessageLoadLogicHead = "{{ _('Welche Logik soll geladen werden?') }}";
     ShngBlockly_Constants.TabHeaderPythonEditor = "{{ _('Python') }}";
+    ShngBlockly_Constants.OKText = "{{ _('OK') }}";
+    ShngBlockly_Constants.CancelText = "{{ _('Abbrechen') }}";
 </script>
 {#   SHNG to Blockly Integration #}
 <script type="text/javascript" src="static/shblocks/sh_items.js"></script>
 <script type="text/javascript" src="static/shblocks/sh_logics.js"></script>
 <script type="text/javascript" src="static/shblocks/sh_tools.js"></script>
 <script type="text/javascript" src="static/shblocks/sh_time.js"></script>
+<script type="text/javascript" src="static/shblocks/shng_plugin_function.js"></script>
 {#   Web UI #}
 <link rel="stylesheet" href="static/shng_blockly.css">
 <script type="text/javascript" src="static/shng_blockly.js"></script>
@@ -55,73 +60,4 @@
 <div id="codemirror_frame">
   <textarea id="content_python"></textarea>
 </div>
-{% endblock %}
-
-
-{% block content %}
-  {{ super() }}
-  <!-- The Modal -->
-  <div class="modal" id="loadLogicDialog">
-    <div class="modal-dialog">
-      <div class="modal-content">      
-        <!-- Modal Header -->
-        <div class="modal-header">
-          <h4 class="modal-title">{{ _('Laden') }}</h4>
-          <button type="button" class="close" data-dismiss="modal">&times;</button>
-        </div>        
-        <!-- Modal body -->
-        <div class="modal-body">
-          <div id="logicList">
-          </div>
-        </div>        
-        <!-- Modal footer -->
-        <div class="modal-footer">
-          <button type="button" class="btn btn-danger" data-dismiss="modal">{{ _('Abbrechen') }}</button>
-        </div>        
-      </div>
-    </div>
-  </div>
-
-  <!-- The Modal -->
-  <div class="modal" id="dialogOK">
-    <div class="modal-dialog">
-      <div class="modal-content">      
-        <!-- Modal Header -->
-        <div class="modal-header">
-          <h4 class="modal-title"></h4>
-          <button type="button" class="close" data-dismiss="modal">&times;</button>
-        </div>        
-        <!-- Modal body -->
-        <div class="modal-body">
-          <div></div>
-        </div>        
-        <!-- Modal footer -->
-        <div class="modal-footer">
-          <button type="button" class="btn" data-dismiss="modal">{{ _('OK') }}</button>
-        </div>        
-      </div>
-    </div>
-  </div>
-
-  <!-- The Modal -->
-<div class="modal" id="dialogOKCancel">
-    <div class="modal-dialog">
-      <div class="modal-content">      
-        <!-- Modal Header -->
-        <div class="modal-header">
-          <h4 class="modal-title"></h4>
-          <button type="button" class="close">&times;</button>
-        </div>        
-        <!-- Modal body -->
-        <div class="modal-body">
-          <div></div>
-        </div>        
-        <!-- Modal footer -->
-        <div class="modal-footer">
-          <button type="button" class="btn OK">{{ _('OK') }}</button>
-          <button type="button" class="btn btn-danger Cancel">{{ _('Abbrechen') }}</button>
-        </div>        
-      </div>
-    </div>
-  </div>
 {% endblock %}

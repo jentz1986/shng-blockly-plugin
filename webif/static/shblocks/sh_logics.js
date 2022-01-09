@@ -24,9 +24,6 @@
  */
 "use strict";
 
-//goog.provide('Blockly.Blocks.sh_trigger');
-//goog.require('Blockly.Blocks');
-
 /**
  * Logic main block
  */
@@ -47,9 +44,19 @@ Blockly.Blocks["sh_logic_main"] = {
             .appendField(new Blockly.FieldTextInput("new_logic"), "LOGIC_NAME");
         this.appendDummyInput().appendField("Logik aktiv:").appendField(new Blockly.FieldCheckbox("TRUE"), "ACTIVE");
         this.appendDummyInput().appendField("Kommentar:").appendField(new Blockly.FieldTextInput("Kommentar"), "COMMENT");
+        this.appendDummyInput().appendField("Triggers:");
+        this.appendStatementInput("TRIGGERS").setCheck([
+            "sh_trigger_item",
+            "sh_trigger_cycle",
+            "sh_trigger_sun",
+            "sh_trigger_daily",
+            "sh_trigger_init",
+        ]);
+        this.appendDummyInput().appendField("Logic:");
         this.appendStatementInput("DO");
-        this.setPreviousStatement(false);
+        this.setPreviousStatement(true, ["otto"]);
         this.setNextStatement(false);
+        this.setDeletable(false);
         this.setTooltip("Block wird ausgeführt, sobald sich der Wert des Triggers ändert.");
     },
 };
@@ -160,7 +167,7 @@ function NextLevel(trigger_block, logicname, ignore_crontab, ignore_watchitem) {
 Blockly.Python["sh_logic_main"] = function (block) {
     this.data = "sh_logic_main";
     var trigger_block = block.getChildren();
-    var triggerid = Blockly.Python.variableDB_.getDistinctName("trigger_id", Blockly.Variables.NAME_TYPE);
+    var triggerid = Blockly.Python.nameDB_.getDistinctName("trigger_id", Blockly.Variables.NAME_TYPE);
     var itemcode = Blockly.Python.valueToCode(block, "TRIG_ITEM", Blockly.Python.ORDER_ATOMIC);
     var itemid = itemcode.split('"')[1];
     //var item = block.getFieldValue('TRIG_ITEM');
@@ -285,14 +292,21 @@ Blockly.Blocks["sh_trigger_item"] = {
         this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
 
         this.setInputsInline(false);
-        this.setPreviousStatement(true);
-        this.setNextStatement(true);
+        this.setPreviousStatement(true, [
+            "sh_trigger_item",
+            "sh_trigger_cycle",
+            "sh_trigger_sun",
+            "sh_trigger_daily",
+            "sh_trigger_block",
+            "sh_trigger_init",
+        ]);
+        this.setNextStatement(true, ["sh_trigger_item", "sh_trigger_cycle", "sh_trigger_sun", "sh_trigger_daily", "sh_trigger_init"]);
         this.setTooltip("Block wird ausgeführt, sobald sich der Wert des Triggers ändert.");
     },
 };
 
 Blockly.Python["sh_trigger_item"] = function (block) {
-    var code = '';  // This must not return any code, as the complete interpretation is done within sh_logic_main
+    var code = ""; // This must not return any code, as the complete interpretation is done within sh_logic_main
     return code;
 };
 
@@ -318,8 +332,15 @@ Blockly.Blocks["sh_trigger_cycle"] = {
             .appendField(new Blockly.FieldTextInput("trigger_id"), "NAME");
         this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
         this.setInputsInline(false);
-        this.setPreviousStatement(true);
-        this.setNextStatement(true);
+        this.setPreviousStatement(true, [
+            "sh_trigger_item",
+            "sh_trigger_cycle",
+            "sh_trigger_sun",
+            "sh_trigger_daily",
+            "sh_trigger_block",
+            "sh_trigger_init",
+        ]);
+        this.setNextStatement(true, ["sh_trigger_item", "sh_trigger_cycle", "sh_trigger_sun", "sh_trigger_daily", "sh_trigger_init"]);
         this.setTooltip("Block wird nach vorgegebener Zeit wiederholt ausgeführt.");
     },
 };
@@ -364,8 +385,15 @@ Blockly.Blocks["sh_trigger_sun"] = {
             .appendField(new Blockly.FieldTextInput("trigger_id"), "NAME");
         this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
         this.setInputsInline(false);
-        this.setPreviousStatement(true);
-        this.setNextStatement(true);
+        this.setPreviousStatement(true, [
+            "sh_trigger_item",
+            "sh_trigger_cycle",
+            "sh_trigger_sun",
+            "sh_trigger_daily",
+            "sh_trigger_block",
+            "sh_trigger_init",
+        ]);
+        this.setNextStatement(true, ["sh_trigger_item", "sh_trigger_cycle", "sh_trigger_sun", "sh_trigger_daily", "sh_trigger_init"]);
         this.setTooltip("Block wird vor/nach Sonnenaufgang/Sonnenuntergang ausgeführt.");
     },
 };
@@ -401,8 +429,15 @@ Blockly.Blocks["sh_trigger_daily"] = {
             .appendField(new Blockly.FieldTextInput("trigger_id"), "NAME");
         this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
         this.setInputsInline(false);
-        this.setPreviousStatement(true);
-        this.setNextStatement(true);
+        this.setPreviousStatement(true, [
+            "sh_trigger_item",
+            "sh_trigger_cycle",
+            "sh_trigger_sun",
+            "sh_trigger_daily",
+            "sh_trigger_block",
+            "sh_trigger_init",
+        ]);
+        this.setNextStatement(true, ["sh_trigger_item", "sh_trigger_cycle", "sh_trigger_sun", "sh_trigger_daily", "sh_trigger_init"]);
         this.setTooltip("Block wird täglich zur gegebenen Stunde ausgeführt.");
     },
 };
@@ -429,8 +464,15 @@ Blockly.Blocks["sh_trigger_init"] = {
             .appendField(new Blockly.FieldTextInput("Init"), "NAME");
         this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
         this.setInputsInline(false);
-        this.setPreviousStatement(true);
-        this.setNextStatement(true);
+        this.setPreviousStatement(true, [
+            "sh_trigger_item",
+            "sh_trigger_cycle",
+            "sh_trigger_sun",
+            "sh_trigger_daily",
+            "sh_trigger_block",
+            "sh_trigger_init",
+        ]);
+        this.setNextStatement(true, ["sh_trigger_item", "sh_trigger_cycle", "sh_trigger_sun", "sh_trigger_daily", "sh_trigger_init"]);
         this.setTooltip("Block wird bei der Initialisierung ausgeführt.");
     },
 };
