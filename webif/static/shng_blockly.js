@@ -16,14 +16,23 @@ ShngBlockly_Engine.workspaceShouldBeSaved = function () {
     return undoStack.length > 0;
 };
 
+ShngBlockly_Engine.calledWhenWorkspaceWasUpdated = function (event) {
+    ShngBlockly_Engine.refreshPython();
+    $("h6")
+        .first()
+        .html("<b>Logic: </b>" + ShngBlockly_Engine.getLogicName());
+};
+
 ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
     ShngBlockly_Engine.blockly_workspace = Blockly.inject(blockly_area_id, {
         grid: { spacing: 25, length: 3, colour: "#ccc", snap: true },
         media: "static/blockly/media/",
-        maxInstances: { sh_logic_main: 1, sh_trigger_block: 1 },
+        maxInstances: { sh_logic_main: 1, sh_trigger_cycle: 1, sh_trigger_init: 1 },
         toolbox: ShngBlockly_Toolbox,
         zoom: { controls: true, wheel: true },
     });
+
+    ShngBlockly_Engine.blockly_workspace.addChangeListener(ShngBlockly_Engine.calledWhenWorkspaceWasUpdated);
 
     ShngBlockly_Engine.python_editor = CodeMirror.fromTextArea(document.getElementById(python_area_id), {
         mode: { name: "python" },
@@ -79,19 +88,25 @@ ShngBlockly_Engine.loadBlocks = function (logicName = null) {
     });
 };
 
+ShngBlockly_Engine.getLogicName = function () {
+    var logicname = null;
+    var topblocks = ShngBlockly_Engine.blockly_workspace.getTopBlocks();
+    topblocks.forEach((topblock) => {
+        if (topblock.data == "sh_logic_main") {
+            logicname = topblock.getFieldValue("LOGIC_NAME");
+        }
+    });
+    return logicname;
+};
+
 /**
  * Save XML and PYTHON code to file on SmartHomeNG server.
  */
 ShngBlockly_Engine.saveBlocks = function () {
-    var logicname = "";
-    var topblock = ShngBlockly_Engine.blockly_workspace.getTopBlocks()[0];
-    if (topblock.data == "sh_logic_main") {
-        logicname = ShngBlockly_Engine.blockly_workspace.getTopBlocks()[0].getFieldValue("LOGIC_NAME");
-    }
-    //ShngBlockly_Engine.workspace;
     var pycode = Blockly.Python.workspaceToCode(ShngBlockly_Engine.blockly_workspace);
     var xmldom = Blockly.Xml.workspaceToDom(ShngBlockly_Engine.blockly_workspace);
     var xmltxt = Blockly.Xml.domToText(xmldom);
+    var logicname = ShngBlockly_Engine.getLogicName();
 
     $.ajax({
         url: ShngBlockly_Constants.ApiEndpointSaveLogic,
@@ -193,7 +208,13 @@ ShngBlockly_UI.showLoadLogicDialog = function () {
     });
 };
 
-ShngBlockly_UI.init = function () {
+$(document).ready(function () {
+    ShngBlockly_Engine.init("content_blocks", "content_python");
+    /**
+     * TODO: Read Parameter from UI to identify logic to be loaded
+     */
+    ShngBlockly_Engine.loadBlocks();
+
     window.addEventListener("beforeunload", function (e) {
         if (ShngBlockly_Engine.workspaceShouldBeSaved()) {
             e["returnValue"] = ShngBlockly_Constants.DialogMessageUnsavedChanges;
@@ -209,16 +230,6 @@ ShngBlockly_UI.init = function () {
             ShngBlockly_Engine.refreshPython();
         }
     });
-};
-
-$(document).ready(function () {
-    ShngBlockly_Engine.init("content_blocks", "content_python");
-    ShngBlockly_UI.init();
-
-    /**
-     * TODO: Read Parameter from UI to identify logic to be loaded
-     */
-    ShngBlockly_Engine.loadBlocks();
 
     $("body").append(
         '<div class="modal" id="genericModal"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h4 class="modal-title"></h4><button type="button" class="close">&times;</button></div><div class="modal-body"><div></div></div><div class="modal-footer"><button type="button" class="btn OK">' +
