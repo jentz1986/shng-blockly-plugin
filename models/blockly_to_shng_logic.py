@@ -68,23 +68,23 @@ class BlocklyToShngLogic():
         original_logic_name = logic_name
         sanitized_logic_name = self.__sanitize_file_name(logic_name)
 
-        python_file_name = self.logics_directory_name + sanitized_logic_name + ".py"
-        blockly_file_name = self.logics_directory_name + sanitized_logic_name + ".blockly"
-
-        self.logger.info(
-            f"blockly_save_logic: saving blockly logic {sanitized_logic_name} as file {python_file_name} - (original name by user: {original_logic_name})")
-
         # prepare values from xml-data
         section_name, config_list, logic_active = self.__parse_blockly_xml_header(
             python_code, original_logic_name, sanitized_logic_name)
 
+        python_file_name = self.logics_directory_name + section_name + ".py"
+        blockly_file_name = self.logics_directory_name + section_name + ".blockly"
+
+        self.logger.info(
+            f"blockly_save_logic: saving blockly logic {section_name} as file {python_file_name} - (original name by user: {original_logic_name})")
+
         self.logger.debug(
-            f"blockly_save_logic: SAVE PY blockly logic {sanitized_logic_name} = {python_file_name}\n '{python_code}'")
+            f"blockly_save_logic: SAVE PY blockly logic {section_name} = {python_file_name}\n '{python_code}'")
         with open(python_file_name, 'w') as python_file:
             python_file.write(python_code)
 
         self.logger.debug(
-            f"blockly_save_logic: SAVE XML blockly logic {sanitized_logic_name} = {blockly_file_name}\n '{blockly_xml}'")
+            f"blockly_save_logic: SAVE XML blockly logic {section_name} = {blockly_file_name}\n '{blockly_xml}'")
         xml = self.__pretty_print_xml(blockly_xml)
         with open(blockly_file_name, 'w') as blockly_file:
             blockly_file.write(xml)
