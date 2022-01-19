@@ -17,10 +17,11 @@ ShngBlockly_Engine.workspaceShouldBeSaved = function () {
 };
 
 ShngBlockly_Engine.calledWhenWorkspaceWasUpdated = function (event) {
+    ShngBlockly_Engine.validateWorkspace();
     ShngBlockly_Engine.refreshPython();
     $("h6")
         .first()
-        .html("<b>Logic: </b>" + ShngBlockly_Engine.getLogicName());
+        .html("<b>Logic: </b>" + ShngBlockly_Engine.getLogicName() + "<br />" + ShngBlockly_Engine.validationSummary);
 };
 
 ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
@@ -29,7 +30,8 @@ ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
         media: "static/blockly/media/",
         maxInstances: { sh_logic_main: 1, sh_trigger_cycle: 1, sh_trigger_init: 1 },
         toolbox: ShngBlockly_Toolbox,
-        zoom: { controls: true, wheel: true },
+        move: { wheel: true },
+        zoom: { controls: true, maxScale: 2, minScale: 0.5 },
     });
 
     ShngBlockly_Engine.blockly_workspace.addChangeListener(ShngBlockly_Engine.calledWhenWorkspaceWasUpdated);
@@ -48,6 +50,37 @@ ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
         foldGutter: true,
         gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
     });
+};
+
+ShngBlockly_Engine.validationSummary = "";
+
+ShngBlockly_Engine.validationIssueList = [];
+
+ShngBlockly_Engine.validateWorkspace = function () {
+    ShngBlockly_Engine.validationIssueList = [];
+
+    var topBlocks = ShngBlockly_Engine.blockly_workspace.getTopBlocks();
+    var allBlocksWithinLogicOrFunction = true;
+    topBlocks.forEach((block) => {
+        if (block.type == "sh_logic_main" || block.type == "procedures_defreturn" || block.type == "procedures_defnoreturn") {
+            // These types may be root-elements
+        } else {
+            allBlocksWithinLogicOrFunction = false;
+        }
+    });
+    if (!allBlocksWithinLogicOrFunction) {
+        ShngBlockly_Engine.validationIssueList.push("Alle Elemente müssen entweder Teil der Logik, oder einer Funktion sein.");
+    }
+
+    if (ShngBlockly_Engine.validationIssueList.length == 0) {
+        ShngBlockly_Engine.validationSummary = "Keine Syntaxfehler!";
+    } else {
+        if (ShngBlockly_Engine.validationIssueList.length == 1) {
+            ShngBlockly_Engine.validationSummary = ShngBlockly_Engine.validationIssueList[0];
+        } else {
+            ShngBlockly_Engine.validationSummary = "" + ShngBlockly_Engine.validationIssueList.length + " Probleme";
+        }
+    }
 };
 
 ShngBlockly_Engine.loadToolbox = function () {
