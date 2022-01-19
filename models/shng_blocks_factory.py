@@ -1,8 +1,48 @@
-import json
 from xml.dom.minidom import Element, Document
 from lib.model.smartplugin import SmartPlugin
 from lib.plugin import Plugins
 from lib.item import Items
+
+
+def translate_to_blockly_value_type(raw_type):
+    if raw_type is None:
+        return None
+    if raw_type == "bool":
+        return "Boolean"
+    if raw_type.startswith("list"):
+        return "Array"
+    if raw_type.startswith("dict"):
+        return "Array"
+    if raw_type == "int":
+        return "Number"
+    if raw_type == "num":
+        return "Number"
+    if raw_type == "str":
+        return "String"
+    if raw_type == "mac":
+        return "String"
+    if raw_type == "knx_ga":
+        return "String"
+    if raw_type == "void":
+        return "void"
+
+
+def translate_to_blockly_shadow_type(value_type, default_value=None):
+    if value_type == "Boolean":
+        return ("logic_boolean", None)
+    elif value_type == "Array":
+        return ("lists_create_empty", None)
+    elif value_type == "Number":
+        if default_value is not None:
+            return ("math_number", "NUM")
+        else:
+            return ("math_number", None)
+    elif value_type == "String":
+        if default_value is not None:
+            return ("text", "TEXT")
+        else:
+            return ("text", None)
+    return (None, None)
 
 
 class BlocklySeparator():
@@ -144,7 +184,10 @@ class BlocklyValue():
         self.name = name
 
     def add_block(self, block_type):
-        block = BlocklyBlock(block_type)
+        if isinstance(block_type, BlocklyBlock):
+            block = block_type
+        else:
+            block = BlocklyBlock(block_type)
         if self.blocks is None:
             self.blocks = []
         self.blocks.append(block)
@@ -186,6 +229,7 @@ class BlocklyBlock():
         self.values = None
         self.fields = None
         self.mutations = None
+        self.__writable_primitive_type_for_item = None
 
     def add_value(self, name) -> BlocklyValue:
         if self.values is None:
@@ -199,6 +243,8 @@ class BlocklyBlock():
             self.fields = []
         val = BlocklyField(name, value, class_)
         self.fields.append(val)
+        if name == "T" and self.block_type == "sh_item_obj":
+            self.__writable_primitive_type_for_item = value
         return val
 
     def add_mutation(self, mutators_list) -> BlocklyMutation:
@@ -233,6 +279,9 @@ class BlocklyBlock():
             ret_dict["name"] = self.name
         ret_dict["blockxml"] = repr(self).replace('"', "'")
         return ret_dict
+
+    def _get_writable_primitive_type_for_item(self):
+        return self.__writable_primitive_type_for_item
 
     def __repr__(self) -> str:
         start = f'<block name="{self.name}" type="{self.block_type}">'
@@ -284,8 +333,11 @@ class BlocklyCategory():
             self.blocks = []
         self.blocks.insert(0, block)
 
-    def add_category(self, name: str):
-        cat = BlocklyCategory(name)
+    def add_category(self, name):
+        if isinstance(name, BlocklyCategory):
+            cat = name
+        else:
+            cat = BlocklyCategory(name)
         if self.categories is None:
             self.categories = []
         self.categories.append(cat)
@@ -349,39 +401,60 @@ class BlocklyCategory():
 
 
 class ShngItemsToBlockly():
+    __sh_items_api = None
 
-    def __init__(self, root_name):
-        self.sh_items_api = None
-        self.__root_name = root_name
+    def wrap_in_setter(block_to_be_wrapped):
+        wrapper = BlocklyBlock("shng_item_set")
+        wrapper.add_value("ITEMOBJECT").add_block(block_to_be_wrapped)
+        item_type = block_to_be_wrapped._get_writable_primitive_type_for_item()
+        wrapper.add_field("ITEMTYPE", item_type)
+        prim_type = translate_to_blockly_value_type(item_type)
+        shadow_type, _ = translate_to_blockly_shadow_type(prim_type)
+        wrapper.add_value("VALUE").add_shadow(shadow_type)
+        return wrapper
+
+    def wrap_in_getter(block_to_be_wrapped):
+        wrapper = BlocklyBlock("shng_item_get")
+        wrapper.add_value("ITEMOBJECT").add_block(block_to_be_wrapped)
+        wrapper.add_field("PROP", "value")
+        wrapper.add_field("ITEMTYPE",
+                          block_to_be_wrapped._get_writable_primitive_type_for_item())
+        return wrapper
+
+    def wrap_trigger(block_to_be_wrapped):
+        wrapper = BlocklyBlock("sh_trigger_item")
+        wrapper.add_value("TRIG_ITEM").add_block(block_to_be_wrapped)
+        return wrapper
+
+    def __init__(self):
+        self.__items_cache = None
+        pass
 
     def __remove_prefix(self, string, prefix) -> str:
         if string.startswith(prefix):
             return string[len(prefix):]
         return string
 
-    def __create_root_category(self) -> BlocklyCategory:
-        if self.sh_items_api is None:
-            self.sh_items_api = Items.get_instance()
+    def __create_root_category(self, category_name, wrapping_function) -> BlocklyCategory:
+        if ShngItemsToBlockly.__sh_items_api is None:
+            ShngItemsToBlockly.__sh_items_api = Items.get_instance()
+        if self.__items_cache is None:
+            self.__items_cache = list(filter(lambda i: i.path().find('.') == -1 and i.path() not in ['env_daily', 'env_init', 'env_loc', 'env_stat'],
+                                             sorted(self.__sh_items_api.return_items(),
+                                                    key=lambda k: str.lower(k['_path']), reverse=False)))
 
-        root_items = filter(lambda i: i._path.find('.') == -1 and i._path not in ['env_daily', 'env_init', 'env_loc', 'env_stat'],
-                            sorted(self.sh_items_api.return_items(),
-                                   key=lambda k: str.lower(k['_path']), reverse=False))
-
-        root = self.__iterate_items(root_items, self.__root_name)
-        root.add_block("sh_item_get")
-        root.add_block("sh_item_set")
-        root.add_block("sh_item_hasattr")
-
+        root = self.__iterate_items(
+            self.__items_cache, category_name, prefix_to_cut="", wrapping_function=wrapping_function)
         return root
 
-    def __create_item_block(self, item, name: str) -> BlocklyBlock:
+    def __create_item_block(self, item, name: str, wrapping_function) -> BlocklyBlock:
         new_block = BlocklyBlock("sh_item_obj", item.path())
         new_block.add_field("N", name)
         new_block.add_field("P", item.path())
         new_block.add_field("T", item.type())
-        return new_block
+        return wrapping_function(new_block)
 
-    def __iterate_items(self, items, name: str, prefix_to_cut: str = ""):
+    def __iterate_items(self, items, name: str, prefix_to_cut: str, wrapping_function):
         category = BlocklyCategory(name)
 
         for item in items:
@@ -390,10 +463,11 @@ class ShngItemsToBlockly():
             ), key=lambda k: str.lower(k['_path']), reverse=False)
             if len(children) > 0:
                 child_category = self.__iterate_items(
-                    children, shortname, item.path())
+                    children, shortname, item.path(), wrapping_function)
                 if child_category:
                     if (item.type() != 'foo') or (item() != None):
-                        this_item = self.__create_item_block(item, shortname)
+                        this_item = self.__create_item_block(
+                            item, shortname, wrapping_function)
                         child_category.prepend_block_object(this_item)
                     count_of_child_blocks = child_category.number_of_blocks()
                     child_category.name = f"{shortname} ({count_of_child_blocks})"
@@ -401,21 +475,18 @@ class ShngItemsToBlockly():
             else:
                 if (item.type() != 'foo') or (item() != None):
                     category.prepend_block_object(
-                        self.__create_item_block(item, shortname))
+                        self.__create_item_block(item, shortname, wrapping_function))
 
         if not category.has_children():
             return None
 
         return category
 
-    def get_dict_for_json(self) -> dict:
-        root_cat = self.__create_root_category()
-        ret_dict = root_cat.get_dict_for_json()
-        return ret_dict
-
-    def get_xml(self, document: Document) -> Element:
-        root_cat = self.__create_root_category()
-        return root_cat.get_xml(document)
+    def get(self, root_cat_name: str, wrapping_function) -> BlocklyCategory:
+        root_cat = self.__create_root_category(
+            root_cat_name, wrapping_function)
+        root_cat.name = root_cat_name
+        return root_cat
 
 
 class ShngPluginFunctionsToBlockly():
@@ -428,24 +499,9 @@ class ShngPluginFunctionsToBlockly():
         self.language = language
 
     def __simplify_types_for_blockly(self, raw_type: str, name: str = None):
-        if raw_type == "bool":
-            return "Boolean"
-        if raw_type.startswith("list"):
-            return "Array"
-        if raw_type.startswith("dict"):
-            return "Array"
-        if raw_type == "int":
-            return "Number"
-        if raw_type == "num":
-            return "Number"
-        if raw_type == "str":
-            return "String"
-        if raw_type == "mac":
-            return "String"
-        if raw_type == "knx_ga":
-            return "String"
-        if raw_type == "void":
-            return "void"
+        to_return = translate_to_blockly_value_type(raw_type)
+        if to_return:
+            return to_return
         if name:
             if "item" in name.lower() and raw_type == "foo":
                 return "shItemType"
@@ -488,7 +544,8 @@ class ShngPluginFunctionsToBlockly():
                        "m_ret_type": self.__simplify_types_for_blockly(f_type)}
 
     def __build_plugin_functions_list(self):
-        # Stolen from /modules/admin/api_plugins.py#L500-L519 rf. https://github.com/smarthomeNG/smarthome/blob/301e4968483079098b01f1e6853c9f358ca6f552/modules/admin/api_plugins.py#L500-L519
+        # Stolen from /modules/admin/api_plugins.py#L500-L519
+        # rf. https://github.com/smarthomeNG/smarthome/blob/301e4968483079098b01f1e6853c9f358ca6f552/modules/admin/api_plugins.py#L500-L519
         if self.plugins is None:
             self.plugins = Plugins.get_instance()
         self.plugin_functions_list = []
@@ -505,22 +562,13 @@ class ShngPluginFunctionsToBlockly():
                                 function)
 
     def __assign_default_value_for_parameter_as_shadow(self, input_value, param):
-        if param["p_type"] == "Boolean":
-            shadow = input_value.add_shadow("logic_boolean")
-            if param['p_default']:
-                pass
-        elif param["p_type"] == "Array":
-            shadow = input_value.add_shadow("lists_create_empty")
-            if param['p_default']:
-                pass
-        elif param["p_type"] == "Number":
-            shadow = input_value.add_shadow("math_number")
-            if param['p_default']:
-                shadow.add_field("NUM", param['p_default'])
-        elif param["p_type"] == "String":
-            shadow = input_value.add_shadow("text")
-            if param['p_default']:
-                shadow.add_field("TEXT", param['p_default'])
+        s_type, field_name = translate_to_blockly_shadow_type(
+            param["p_type"], param['p_default'])
+
+        if s_type is not None:
+            shadow = input_value.add_shadow(s_type)
+            if field_name is not None:
+                shadow.add_field(field_name, param['p_default'])
 
     def __create_root_category(self) -> BlocklyCategory:
         self.__build_plugin_functions_list()
@@ -570,15 +618,16 @@ class ShngPluginFunctionsToBlockly():
 class ShngBlockFactory():
 
     def __init__(self, translation_function):
-        self.__items_to_block = None
+        self.__items_to_blocks = None
         self.__plugin_functions_to_blocks = None
         self.translate = translation_function
 
     def __tree_generator(self):
-        yield self.__get_blocks_shng_logic()
+        yield self.__get_blocks_shng_triggers()
         yield self.__get_blocks_shng_tools()
         yield self.__get_blocks_shng_plugin_functions()
-        yield self.__get_blocks_shng_items()
+        yield self.__get_blocks_shng_write_to_items()
+        yield self.__get_blocks_shng_read_from_items()
         yield BlocklySeparator()
         yield self.__get_blocks_if()
         yield self.__get_blocks_boolean()
@@ -588,16 +637,17 @@ class ShngBlockFactory():
         yield self.__get_blocks_lists()
         yield self.__get_blocks_colours()
         yield BlocklyCategory(self.translate("Variables"), "VARIABLE")
-        yield BlocklyCategory(self.translate("Functions"), "PROCEDURE")
+        # yield BlocklyCategory(self.translate("Functions"), "PROCEDURE")
 
-    def __get_blocks_shng_logic(self) -> BlocklyCategory:
-        root_cat = BlocklyCategory(self.translate("SmartHomeNG Logic"))
-        root_cat.add_block("sh_trigger_item").add_value("TRIG_ITEM")
+    def __get_blocks_shng_triggers(self) -> BlocklyCategory:
+        if self.__items_to_blocks is None:
+            self.__items_to_blocks = ShngItemsToBlockly()
+        root_cat = self.__items_to_blocks.get(self.translate(
+            "TB_SHNG_Triggers"), ShngItemsToBlockly.wrap_trigger)
         root_cat.add_block("sh_trigger_cycle")
         root_cat.add_block("sh_trigger_sun")
         root_cat.add_block("sh_trigger_daily")
         root_cat.add_block("sh_trigger_init")
-        root_cat.add_block("sh_logic_main")
         return root_cat
 
     def __get_blocks_shng_tools(self) -> BlocklyCategory:
@@ -612,28 +662,37 @@ class ShngBlockFactory():
 
         tool_cat = root_cat.add_category(self.translate("Tools"))
         tool_cat.add_block("shtools_logger").add_value(
-            "LOGTEXT").add_block("text")
+            "LOGTEXT").add_shadow("text")
         dew_point = tool_cat.add_block("shtools_dewpoint")
-        dew_point.add_value("HUM").add_block(
+        dew_point.add_value("HUM").add_shadow(
             "math_number").add_field("NUM", "42")
-        dew_point.add_value("TEMP").add_block(
+        dew_point.add_value("TEMP").add_shadow(
             "math_number").add_field("NUM", "21")
         tool_cat.add_block("shtools_fetchurl")
         tool_cat.add_block("shtools_fetchurl2")
+
+        root_cat.add_block("sh_logic_main")
         return root_cat
 
-    def __get_blocks_shng_plugin_functions(self) -> BlocklyCategory:
+    def __get_blocks_shng_plugin_functions(self) -> ShngPluginFunctionsToBlockly:
         if self.__plugin_functions_to_blocks is None:
             self.__plugin_functions_to_blocks = ShngPluginFunctionsToBlockly(
                 self.translate("SmartHomeNG Plugin-Functions"),
                 self.translate("LANGUAGE_LOCALE"))
         return self.__plugin_functions_to_blocks
 
-    def __get_blocks_shng_items(self) -> BlocklyCategory:
-        if self.__items_to_block is None:
-            self.__items_to_block = ShngItemsToBlockly(
-                self.translate("SmartHomeNG Items"))
-        return self.__items_to_block
+    def __get_blocks_shng_write_to_items(self) -> BlocklyCategory:
+        if self.__items_to_blocks is None:
+            self.__items_to_blocks = ShngItemsToBlockly()
+        return self.__items_to_blocks.get(self.translate("TB_SHNG_Items_To"), ShngItemsToBlockly.wrap_in_setter)
+
+    def __get_blocks_shng_read_from_items(self) -> BlocklyCategory:
+        if self.__items_to_blocks is None:
+            self.__items_to_blocks = ShngItemsToBlockly()
+        root_cat = self.__items_to_blocks.get(self.translate(
+            "TB_SHNG_Items_From"), ShngItemsToBlockly.wrap_in_getter)
+        root_cat.add_block("shng_logic_trigger_dict")
+        return root_cat
 
     def __get_blocks_if(self) -> BlocklyCategory:
         root_cat = BlocklyCategory(self.translate("IfElse"))
@@ -656,13 +715,13 @@ class ShngBlockFactory():
     def __get_blocks_loops(self) -> BlocklyCategory:
         root_cat = BlocklyCategory(self.translate("Loops"))
         root_cat.add_block("controls_repeat_ext").add_value(
-            "TIMES").add_block("math_number").add_field("NUM", "10")
+            "TIMES").add_shadow("math_number").add_field("NUM", "10")
         root_cat.add_block("controls_whileUntil")
         for_b = root_cat.add_block("controls_for")
         for_b.add_field("VAR", "i")
-        for_b.add_value("FROM").add_block("math_number").add_field("NUM", "1")
-        for_b.add_value("TO").add_block("math_number").add_field("NUM", "1")
-        for_b.add_value("BY").add_block("math_number").add_field("NUM", "1")
+        for_b.add_value("FROM").add_shadow("math_number").add_field("NUM", "1")
+        for_b.add_value("TO").add_shadow("math_number").add_field("NUM", "1")
+        for_b.add_value("BY").add_shadow("math_number").add_field("NUM", "1")
         root_cat.add_block("controls_forEach")
         root_cat.add_block("controls_flow_statements")
         return root_cat
@@ -676,16 +735,17 @@ class ShngBlockFactory():
         root_cat.add_block("math_constant")
         root_cat.add_block("math_number_property")
         root_cat.add_block("math_change").add_value(
-            "DELTA").add_block("math_number").add_field("NUM", 1)
+            "DELTA").add_shadow("math_number").add_field("NUM", 1)
         root_cat.add_block("math_round")
         root_cat.add_block("math_on_list")
         root_cat.add_block("math_modulo")
         constr = root_cat.add_block("math_constrain")
-        constr.add_value("LOW").add_block("math_number").add_field("NUM", 1)
-        constr.add_value("HIGH").add_block("math_number").add_field("NUM", 100)
+        constr.add_value("LOW").add_shadow("math_number").add_field("NUM", 1)
+        constr.add_value("HIGH").add_shadow(
+            "math_number").add_field("NUM", 100)
         random = root_cat.add_block("math_random_int")
-        random.add_value("FROM").add_block("math_number").add_field("NUM", 1)
-        random.add_value("TO").add_block("math_number").add_field("NUM", 100)
+        random.add_value("FROM").add_shadow("math_number").add_field("NUM", 1)
+        random.add_value("TO").add_shadow("math_number").add_field("NUM", 100)
         root_cat.add_block("math_random_float")
         return root_cat
 
@@ -714,32 +774,32 @@ class ShngBlockFactory():
         root_cat.add_block("lists_create_empty")
         root_cat.add_block("lists_create_with")
         root_cat.add_block("lists_repeat").add_value(
-            "NUM").add_block("math_number").add_field("NUM", 5)
+            "NUM").add_shadow("math_number").add_field("NUM", 5)
         root_cat.add_block("lists_length")
         root_cat.add_block("lists_isEmpty")
-        root_cat.add_block("lists_indexOf").add_value("VALUE").add_block(
-            "variables_get").add_field("VAR", "...", class_="listVar")
-        root_cat.add_block("lists_getIndex").add_value("VALUE").add_block(
-            "variables_get").add_field("VAR", "...", class_="listVar")
-        root_cat.add_block("lists_setIndex").add_value("LIST").add_block(
-            "variables_get").add_field("VAR", "...", class_="listVar")
-        root_cat.add_block("lists_getSublist").add_value("LIST").add_block(
-            "variables_get").add_field("VAR", "...", class_="listVar")
+        root_cat.add_block("lists_indexOf").add_value("VALUE").add_shadow(
+            "variables_get")
+        root_cat.add_block("lists_getIndex").add_value("VALUE").add_shadow(
+            "variables_get")
+        root_cat.add_block("lists_setIndex").add_value("LIST").add_shadow(
+            "variables_get")
+        root_cat.add_block("lists_getSublist").add_value("LIST").add_shadow(
+            "variables_get")
         return root_cat
 
     def __get_blocks_colours(self) -> BlocklyCategory:
         root_cat = BlocklyCategory(self.translate("Colours"))
         root_cat.add_block("colour_picker")
         rgb = root_cat.add_block("colour_rgb")
-        rgb.add_value("RED").add_block("math_number").add_field("NUM", 100)
-        rgb.add_value("GREEN").add_block("math_number").add_field("NUM", 50)
-        rgb.add_value("BLUE").add_block("math_number").add_field("NUM", 0)
+        rgb.add_value("RED").add_shadow("math_number").add_field("NUM", 100)
+        rgb.add_value("GREEN").add_shadow("math_number").add_field("NUM", 50)
+        rgb.add_value("BLUE").add_shadow("math_number").add_field("NUM", 0)
         blender = root_cat.add_block("colour_blend")
-        blender.add_value("COLOUR1").add_block(
+        blender.add_value("COLOUR1").add_shadow(
             "colour_picker").add_field("COLOUR", "#ff0000")
-        blender.add_value("COLOUR2").add_block(
+        blender.add_value("COLOUR2").add_shadow(
             "colour_picker").add_field("COLOUR", "#3333ff")
-        blender.add_value("RATIO").add_block(
+        blender.add_value("RATIO").add_shadow(
             "math_number").add_field("NUM", 0.5)
 
         return root_cat

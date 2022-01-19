@@ -67,55 +67,52 @@ class BlocklyToShngLogic():
     def save_logic(self, logic_name, python_code, blockly_xml):
         original_logic_name = logic_name
         sanitized_logic_name = self.__sanitize_file_name(logic_name)
+        if self.logic_yaml_section_prefix != '':
+            sanitized_logic_name = self.logic_yaml_section_prefix + sanitized_logic_name
 
         # prepare values from xml-data
-        section_name, config_list, logic_active = self.__parse_blockly_xml_header(
+        config_list, logic_active = self.__parse_blockly_xml_header(
             python_code, original_logic_name, sanitized_logic_name)
 
-        python_file_name = self.logics_directory_name + section_name + ".py"
-        blockly_file_name = self.logics_directory_name + section_name + ".blockly"
+        python_file_name = self.logics_directory_name + sanitized_logic_name + ".py"
+        blockly_file_name = self.logics_directory_name + sanitized_logic_name + ".blockly"
 
         self.logger.info(
-            f"blockly_save_logic: saving blockly logic {section_name} as file {python_file_name} - (original name by user: {original_logic_name})")
+            f"blockly_save_logic: saving blockly logic {sanitized_logic_name} as file {python_file_name} - (original name by user: {original_logic_name})")
 
         self.logger.debug(
-            f"blockly_save_logic: SAVE PY blockly logic {section_name} = {python_file_name}\n '{python_code}'")
+            f"blockly_save_logic: SAVE PY blockly logic {sanitized_logic_name} = {python_file_name}\n '{python_code}'")
         with open(python_file_name, 'w') as python_file:
             python_file.write(python_code)
 
         self.logger.debug(
-            f"blockly_save_logic: SAVE XML blockly logic {section_name} = {blockly_file_name}\n '{blockly_xml}'")
+            f"blockly_save_logic: SAVE XML blockly logic {sanitized_logic_name} = {blockly_file_name}\n '{blockly_xml}'")
         xml = self.__pretty_print_xml(blockly_xml)
         with open(blockly_file_name, 'w') as blockly_file:
             blockly_file.write(xml)
 
         # actually update logic.yaml
         self.shng_logics_api.update_config_section(
-            logic_active, section_name, config_list)
+            logic_active, sanitized_logic_name, config_list)
 
         # load logic into SHNG
-        self.shng_logics_api.load_logic(section_name)
+        self.shng_logics_api.load_logic(sanitized_logic_name)
 
-    def __parse_logic_header_from_blockly_xml_header(self, config_line):
-        section_name, file_name_info, logic_active_info, file_name_comment = config_line.split(
+    def __parse_logic_header_from_blockly_code_header(self, config_line):
+        self.logger.info(f"parse logic header config_line: |{config_line}|")
+        section_name, logic_active_info, file_name_comment = config_line.split(
             '#')
-
-        _, file_name = file_name_info.split(':')
-        file_name = file_name.strip()
 
         _, logic_active = logic_active_info.split(':')
         logic_active = Utils.to_bool(logic_active.strip(), False)
 
         self.logger.info(
             f"blockly_update_config: #comment# section = '{section_name}'")
-        return (section_name, file_name, file_name_comment, logic_active)
+        return (section_name, file_name_comment, logic_active)
 
-    def __parse_trigger_header_from_blockly_xml_header(self, config_line):
-        section_name, file_name_info, trigger_info, trigger_comment = config_line.split(
-            '#')
-
-        _, file_name = file_name_info.split(':')
-        file_name = file_name.strip()
+    def __parse_trigger_header_from_blockly_code_header(self, config_line):
+        self.logger.info(f"parse trigger header config_line: |{config_line}|")
+        section_name, trigger_info, trigger_comment = config_line.split('#')
 
         trigger_key, trigger_value = trigger_info.split(':')
         trigger_key = trigger_key.strip()
@@ -123,7 +120,7 @@ class BlocklyToShngLogic():
 
         self.logger.info(
             f"blockly_update_config: #trigger# section = '{section_name}'")
-        return (section_name, file_name, trigger_key, trigger_value, trigger_comment)
+        return (section_name, trigger_key, trigger_value, trigger_comment)
 
     def __parse_blockly_xml_header(self, code, original_logic_name_by_user, sanitized_logic_name):
         """
@@ -135,27 +132,20 @@ class BlocklyToShngLogic():
             line = line.replace(
                 original_logic_name_by_user.lower().replace(" ", "_"), sanitized_logic_name)
             if line.startswith('#comment#') and config_list == []:
-                section_name, file_name, file_name_comment, logic_active = self.__parse_logic_header_from_blockly_xml_header(
+                _, file_name_comment, logic_active = self.__parse_logic_header_from_blockly_code_header(
                     line[9:])
-                config_list.append(['filename', file_name, file_name_comment])
+                config_list.append(
+                    ['filename', sanitized_logic_name + ".py", file_name_comment])
             elif line.startswith('#trigger#'):
-                sn, file_name, trigger_key, trigger_value, trigger_comment = self.__parse_trigger_header_from_blockly_xml_header(
+                _, trigger_key, trigger_value, trigger_comment = self.__parse_trigger_header_from_blockly_code_header(
                     line[9:])
-                if section_name is None:
-                    section_name = sn
                 if config_list == []:
-                    config_list.append(['filename', file_name, ''])
+                    config_list.append(
+                        ['filename', sanitized_logic_name + ".py", ''])
                 config_list.append(
                     [trigger_key, trigger_value, trigger_comment])
             elif line.startswith('"""'):    # initial .rst-comment reached, stop scanning
                 break
             else:                           # non-metadata lines between beginning of code and initial .rst-comment
                 pass
-
-        if section_name is None:
-            section_name = sanitized_logic_name
-        if self.logic_yaml_section_prefix != '':
-            section_name = self.logic_yaml_section_prefix + section_name
-
-        self.logger.info(f"blockly_update_config: section = '{section_name}'")
-        return (section_name, config_list, logic_active)
+        return (config_list, logic_active)

@@ -3,86 +3,95 @@ plugin_translations:
     # Translations for the plugin specially for the web interface
 
     "Blocks":
-        de: "="
-        en: "="
+        "de": "="
+        "en": "="
     "Python":
-        de: "="
-        en: "="
+        "de": "="
+        "en": "="
     "Neu":
-        de: "="
-        en: "New"
+        "de": "="
+        "en": "New"
     "Speichern":
-        de: "="
-        en: "Save"
+        "de": "="
+        "en": "Save"
     "Laden":
-        de: "="
-        en: "Load Logic"
+        "de": "="
+        "en": "Load Logic"
     "OK":
-        de: "="
-        en: "="
+        "de": "="
+        "en": "="
     "Abbrechen":
-        de: "="
-        en: "Cancel"
+        "de": "="
+        "en": "Cancel"
     "Cannot load: ":
-        de: "Kann nicht laden: "
-        en: "="
+        "de": "Kann nicht laden: "
+        "en": "="
     "Successfully saved":
-        de: "Erfolgreich gespeichert!"
-        en: "="
+        "de": "Erfolgreich gespeichert!"
+        "en": "="
     "Bist Du sicher?":
-        de: "="
-        en: "Are you sure?"
+        "de": "="
+        "en": "Are you sure?"
     "Welche Logik soll geladen werden?":
-        de: "="
-        en: "Which logic shall be loaded?"
+        "de": "="
+        "en": "Which logic shall be loaded?"
     "Änderungen verwerfen?":
-        de: "="
-        en: "Ignore changes?"
+        "de": "="
+        "en": "Ignore changes?"
     "LANGUAGE_LOCALE":
-        de: "de"
-        en: "en"
+        "de": "de"
+        "en": "en"
     "Variables":
-        de: "Variablen"
-        en: "="
+        "de": "Variablen"
+        "en": "="
     "Functions":
-        de: "Funktionen"
-        en: "="
+        "de": "Funktionen"
+        "en": "="
     "SmartHomeNG Logic":
-        de: "Logik und Trigger"
-        en: "Logic and Trigger"
+        "de": "Logik und Trigger"
+        "en": "Logic and Trigger"
     "SmartHomeNG Tools":
-        de: "="
-        en: "="
+        "de": "="
+        "en": "="
     "Time":
-        de: "Zeit"
-        en: "="
+        "de": "Zeit"
+        "en": "="
     "Tools":
-        de: "Tools"
-        en: "="
+        "de": "Tools"
+        "en": "="
+    "TB_SHNG_Triggers":
+        "de": "Diese Logik soll laufen"
+        "en": "Start this logic"
+    "TB_SHNG_Items_To":
+        "de": "Setze Item-Wert oder Eigenschaft"
+        "en": "Set Item-Value or property"
+    "TB_SHNG_Items_From":
+        "de": "Nutze Item-Wert oder Eigenschaft"
+        "en": "Use Item-Value or property"
     "SmartHomeNG Plugin-Functions":
-        de: "PlugIn-Funktionen"
-        en: "="
+        "de": "PlugIn-Funktionen"
+        "en": "="
     "SmartHomeNG Items":
-        de: "Items"
-        en: "="
+        "de": "Items"
+        "en": "="
     "IfElse":
-        de: "Wenn, dann"
-        en: "if, then"
+        "de": "Wenn, dann"
+        "en": "if, then"
     "Boolean":
-        de: "Aussagenlogik"
-        en: "="
+        "de": "Aussagenlogik"
+        "en": "="
     "Loops":
-        de: "Schleifen"
-        en: "="
+        "de": "Schleifen"
+        "en": "="
     "Math":
-        de: "Rechnen"
-        en: "="
+        "de": "Rechnen"
+        "en": "="
     "Text":
-        de: "="
-        en: "="
+        "de": "="
+        "en": "="
     "Lists":
-        de: "Listen"
-        en: "="
+        "de": "Listen"
+        "en": "="
     "Colours":
-        de: "Farben"
-        en: "="
+        "de": "Farben"
+        "en": "="

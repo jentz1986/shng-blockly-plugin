@@ -2,6 +2,8 @@
 
 const SHNG_TRIGGER_TYPES = ["sh_trigger_item", "sh_trigger_cycle", "sh_trigger_sun", "sh_trigger_daily", "sh_trigger_init"];
 
+let DO_NOT_GENERATE_CODE_FOR_TRIGGERS = (block_obj) => ""; // because code generation is handled in the sh_logic_main
+
 /**
  * Logic main block
  */
@@ -13,15 +15,13 @@ Blockly.Blocks["sh_logic_main"] = {
             .appendField("Logik-Name:")
             .appendField(new Blockly.FieldTextInput("new_logic"), "LOGIC_NAME");
         this.appendDummyInput().appendField("Logik aktiv:").appendField(new Blockly.FieldCheckbox("TRUE"), "ACTIVE");
-        this.appendDummyInput().appendField("Kommentar:").appendField(new Blockly.FieldTextInput("Kommentar"), "COMMENT");
-        this.appendDummyInput().appendField("Triggers:");
+        this.appendDummyInput().appendField("Diese Logik starten,");
         this.appendStatementInput("TRIGGERS").setCheck(SHNG_TRIGGER_TYPES);
-        this.appendDummyInput().appendField("Logic:");
+        this.appendDummyInput().appendField("Und dann mache folgendes:");
         this.appendStatementInput("DO");
         this.setPreviousStatement(false);
         this.setNextStatement(false);
         this.setDeletable(false);
-        this.setTooltip("Block wird ausgeführt, sobald sich der Wert des Triggers ändert.");
     },
     getShngLogicName: function () {
         return this.getFieldValue("LOGIC_NAME");
@@ -47,7 +47,7 @@ Blockly.Blocks["sh_logic_main"] = {
     getShngCycleTriggerDefinition: function () {
         var ccscs = this.getShngTriggers((child) => child.isShngTriggerDefinition && child.type == "sh_trigger_cycle");
         if (ccscs != null && ccscs.length > 0) {
-            return ccscs[0].getShngTriggerInformation();
+            return ccscs[0].getShngTriggerInformation(); // Only the first trigger is relevant
         }
     },
     getShngItemTriggerDefinitions: function () {
@@ -69,8 +69,8 @@ Blockly.Blocks["sh_logic_main"] = {
         let to_return = [];
         to_return.push(this.getShngLogicName() + ":");
         {
-            let fileNameLine = indent + "filename: " + this.getShngLogicName() + ".py";
-            let comment = this.getFieldValue("COMMENT");
+            let fileNameLine = indent + "filename: blockly_" + this.getShngLogicName() + ".py";
+            let comment = this.getCommentText();
             if (comment) {
                 fileNameLine = fileNameLine.padEnd(commentAfter);
                 fileNameLine += "# " + comment;
@@ -125,20 +125,21 @@ Blockly.Blocks["sh_logic_main"] = {
         var logicname = this.getShngLogicName();
         {
             let active = this.getShngLogicActive();
-            let comment = this.getFieldValue("COMMENT");
+            let comment = this.getCommentText();
             if (!comment) {
                 comment = " ";
             }
-            to_return.push("#comment#" + logicname + "#filename: " + logicname + ".py#active: " + active + "#" + comment);
+            to_return.push("#comment#" + logicname + "#active: " + active + "#" + comment);
         }
         var cycle_trigger = this.getShngCycleTriggerDefinition();
         if (cycle_trigger) {
-            let cycle_def = "#trigger#" + logicname + "#filename: " + logicname + ".py#cycle: " + cycle_trigger.cycle;
+            let cycle_def = "#trigger#" + logicname + "#cycle: " + cycle_trigger.cycle;
             if (cycle_trigger.trigger_value) {
                 cycle_def += " = " + cycle_trigger.trigger_value;
             }
+            cycle_def += "# ";
             if (cycle_trigger.comment) {
-                cycle_def += "# " + cycle_trigger.comment;
+                cycle_def += cycle_trigger.comment;
             }
             to_return.push(cycle_def);
         }
@@ -157,9 +158,7 @@ Blockly.Blocks["sh_logic_main"] = {
                 crontabList.push(crontabAndValue);
                 commentList.push(comment);
             });
-            to_return.push(
-                "#trigger#" + logicname + "#filename: " + logicname + ".py#crontab: [" + crontabList.join(",") + "]#[" + commentList.join(",") + "]"
-            );
+            to_return.push("#trigger#" + logicname + "#crontab: [" + crontabList.join(",") + "]#[" + commentList.join(",") + "]");
         }
         var item_triggers = this.getShngItemTriggerDefinitions();
         if (item_triggers) {
@@ -167,51 +166,32 @@ Blockly.Blocks["sh_logic_main"] = {
             let commentList = [];
             item_triggers.forEach((item) => {
                 let info = item.getShngTriggerInformation();
-                let watch_item = "'" + info.watch_item;
-                if (info.trigger_value) {
-                    watch_item += " = " + info.trigger_value;
-                }
-                watch_item += "'";
+                let watch_item = "'" + info.watch_item + "'";
                 let comment = info.comment ? "'" + info.comment + "'" : "''";
                 watchItemList.push(watch_item);
                 commentList.push(comment);
             });
-            to_return.push(
-                "#trigger#" +
-                    logicname +
-                    "#filename: " +
-                    logicname +
-                    ".py#watch_item: [" +
-                    watchItemList.join(",") +
-                    "]#[" +
-                    commentList.join(",") +
-                    "]"
-            );
+            to_return.push("#trigger#" + logicname + "#watch_item: [" + watchItemList.join(",") + "]#[" + commentList.join(",") + "]");
         }
         return to_return.join("\n");
     },
 };
 
 Blockly.Python["sh_logic_main"] = function (block) {
-    var code = "";
-    var logicname = this.getShngLogicName();
-    var active = this.getShngLogicActive();
-    var comment = this.getFieldValue("COMMENT");
-    if (!comment) {
-        comment = " ";
+    var code = block.getInterpreterDeclaration() + "\n\n";
+
+    code += '"""\n' + "Logic " + this.getShngLogicName() + "\n";
+    code += "THIS FILE WAS GENERATED FROM A BLOCKLY LOGIC WORKSHEET - DON'T EDIT THIS FILE, use the Blockly plugin instead !\n";
+    let commentText = this.getCommentText();
+    if (commentText) {
+        code += "\n" + commentText + "\n";
     }
 
-    code += block.getInterpreterDeclaration() + "\n\n";
-
-    code += '"""\n' + "Logic " + logicname + ".py\n";
-    code += "\n" + comment + "\n";
-
-    code += "\nTHIS FILE WAS GENERATED FROM A BLOCKY LOGIC WORKSHEET - DON'T EDIT THIS FILE, use the Blockly plugin instead !\n";
     code += "\nto be configured in /etc/logic.yaml:\n";
     code += block.getShngYamlDeclaration();
     code += '\n"""\n\n';
 
-    code += "logic_active = " + active + "\n";
+    code += "logic_active = " + this.getShngLogicActive() + "\n";
     code += "if (logic_active == True):\n";
 
     var logic_body_python_code = Blockly.Python.statementToCode(block, "DO");
@@ -219,46 +199,66 @@ Blockly.Python["sh_logic_main"] = function (block) {
     return code + "\n\n";
 };
 
+Blockly.Blocks["shng_logic_trigger_dict"] = {
+    init: function () {
+        this.setColour(190);
+        var dictFieldDropdown = new Blockly.FieldDropdown([
+            ["Triggerwert", "value"],
+            ["Auslöser", "by"],
+            ["Pfad des auslösenden Items", "source"],
+            ["Weitere Details des Auslösers", "source_details"],
+            ["Triggerziel", "dest"],
+        ]);
+        this.appendDummyInput().appendField(dictFieldDropdown, "DICTFIELD").appendField("aus der Auslösung dieser Logik");
+        this.setInputsInline(true);
+        this.setOutput(true);
+        this.setPreviousStatement(false);
+        this.setNextStatement(false);
+        this.setTooltip("");
+    },
+};
+
+Blockly.Python["shng_logic_trigger_dict"] = function (block) {
+    let code = 'trigger["' + block.getFieldValue("DICTFIELD") + '"]';
+    return [code, Blockly.Python.ORDER_NONE];
+};
+
 /**
  * Trigger die Logic bei Änderung des Items
  */
+Blockly.Python["sh_trigger_item"] = DO_NOT_GENERATE_CODE_FOR_TRIGGERS;
 Blockly.Blocks["sh_trigger_item"] = {
     init: function () {
         this.isShngTriggerDefinition = true;
-
         this.setColour(190);
-        this.appendValueInput("TRIG_ITEM").setCheck("shItemType").setAlign(Blockly.ALIGN_LEFT).appendField("Trigger: Auslösen bei Änderung von");
-        this.appendDummyInput().appendField("als Trigger").appendField(new Blockly.FieldTextInput("trigger_id"), "NAME"); // TODO: Geht das überhaupt?
-        this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
-
-        this.setInputsInline(false);
+        this.appendDummyInput().appendField("wenn sich");
+        this.appendValueInput("TRIG_ITEM").setCheck("shItemType").setAlign(Blockly.ALIGN_LEFT);
+        this.appendDummyInput().appendField("ändert");
+        this.setInputsInline(true);
         this.setPreviousStatement(true, SHNG_TRIGGER_TYPES);
         this.setNextStatement(true, SHNG_TRIGGER_TYPES);
-        this.setTooltip("Block wird ausgeführt, sobald sich der Wert des Triggers ändert.");
+        this.setTooltip(
+            "Der Logikinhalt wird ausgeführt, wenn sich der Wert des Items ändert. Dann wird der neue Wert des Items als Triggerwert an die Logik übergeben."
+        );
     },
     isShngTriggerForCrontab: false,
     isShngTriggerDefinition: true,
     getShngTriggerInformation: function () {
-        var trigger_id = this.getFieldValue("NAME"); // TODO: Geht das überhaupt?
         var itemcode = Blockly.Python.valueToCode(this, "TRIG_ITEM", Blockly.Python.ORDER_ATOMIC);
-        var comment = this.getFieldValue("COMMENT");
+        var comment = this.getCommentText();
 
         return {
             type: "trigger_item",
-            trigger_value: trigger_id,
             watch_item: itemcode,
             comment: comment,
         };
     },
 };
 
-Blockly.Python["sh_trigger_item"] = function (trigger_block) {
-    return ""; // This must not return any code, as the complete interpretation is done within sh_logic_main
-};
-
 /**
  * Trigger ... alle x sec.
  */
+Blockly.Python["sh_trigger_cycle"] = DO_NOT_GENERATE_CODE_FOR_TRIGGERS;
 Blockly.Blocks["sh_trigger_cycle"] = {
     /**
      * Block for
@@ -266,16 +266,14 @@ Blockly.Blocks["sh_trigger_cycle"] = {
      */
     init: function () {
         this.setColour(190);
+        let numberOfSecondsField = new Blockly.FieldNumber(60, 0);
+        numberOfSecondsField.setValidator(Blockly.FieldTextInput.nonnegativeIntegerValidator);
         this.appendDummyInput()
-            .appendField("Trigger: alle")
-            //        .appendField(new Blockly.FieldTextInput('60',
-            //            Blockly.FieldTextInput.nonnegativeIntegerValidator), 'TRIG_CYCLE')
-            .appendField(new Blockly.FieldNumber(60, 0), "TRIG_CYCLE")
-            .appendField("Sekunden auslösen")
-            //    this.appendDummyInput()
-            .appendField("als Trigger")
+            .appendField("in einem Zyklus von")
+            .appendField(numberOfSecondsField, "TRIG_CYCLE")
+            .appendField("Sekunden,")
+            .appendField("mit dem Triggerwert:")
             .appendField(new Blockly.FieldTextInput("trigger_id"), "NAME");
-        this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
         this.setInputsInline(false);
         this.setPreviousStatement(true, SHNG_TRIGGER_TYPES);
         this.setNextStatement(true, SHNG_TRIGGER_TYPES);
@@ -285,7 +283,7 @@ Blockly.Blocks["sh_trigger_cycle"] = {
     isShngTriggerDefinition: true,
     getShngTriggerInformation: function () {
         var trigger_id = this.getFieldValue("NAME");
-        var comment = this.getFieldValue("COMMENT");
+        var comment = this.getCommentText();
         var cycle = this.getFieldValue("TRIG_CYCLE");
 
         return {
@@ -297,13 +295,10 @@ Blockly.Blocks["sh_trigger_cycle"] = {
     },
 };
 
-Blockly.Python["sh_trigger_cycle"] = function (trigger_block) {
-    return ""; // This must not return any code, as the complete interpretation is done within sh_logic_main
-};
-
 /**
  * Trigger vor/nach Sonnen-Auf-/Untergang.
  */
+Blockly.Python["sh_trigger_sun"] = DO_NOT_GENERATE_CODE_FOR_TRIGGERS;
 Blockly.Blocks["sh_trigger_sun"] = {
     /**
      * Block for
@@ -311,10 +306,10 @@ Blockly.Blocks["sh_trigger_sun"] = {
      */
     init: function () {
         this.setColour(190);
+        let offsetField = new Blockly.FieldNumber(0, 0);
+        offsetField.setValidator(Blockly.FieldTextInput.nonnegativeIntegerValidator);
         this.appendDummyInput()
-            .appendField("Trigger (crontab): Auslösen")
-            // .appendField(new Blockly.FieldTextInput('0', Blockly.FieldTextInput.nonnegativeIntegerValidator), 'OFFSET')
-            .appendField(new Blockly.FieldNumber(0, 0), "OFFSET")
+            .appendField(offsetField, "OFFSET")
             .appendField("Minuten")
             .appendField(
                 new Blockly.FieldDropdown([
@@ -331,9 +326,8 @@ Blockly.Blocks["sh_trigger_sun"] = {
                 ]),
                 "SUN"
             )
-            .appendField("als Trigger")
+            .appendField(", mit dem Triggerwert")
             .appendField(new Blockly.FieldTextInput("trigger_id"), "NAME");
-        this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
         this.setInputsInline(false);
         this.setPreviousStatement(true, SHNG_TRIGGER_TYPES);
         this.setNextStatement(true, SHNG_TRIGGER_TYPES);
@@ -343,7 +337,7 @@ Blockly.Blocks["sh_trigger_sun"] = {
     isShngTriggerDefinition: true,
     getShngTriggerInformation: function () {
         var trigger_id = this.getFieldValue("NAME");
-        var comment = this.getFieldValue("COMMENT");
+        var comment = this.getCommentText();
         var cronstring = this.getShngTriggerCrontab();
 
         return {
@@ -361,26 +355,20 @@ Blockly.Blocks["sh_trigger_sun"] = {
     },
 };
 
-Blockly.Python["sh_trigger_sun"] = function (block) {
-    return ""; // This must not return any code, as the complete interpretation is done within sh_logic_main
-};
-
 /**
  * Trigger taeglich um HH:MM Uhr
  */
+Blockly.Python["sh_trigger_daily"] = DO_NOT_GENERATE_CODE_FOR_TRIGGERS;
 Blockly.Blocks["sh_trigger_daily"] = {
     init: function () {
         this.setColour(190);
         this.appendDummyInput()
-            .appendField("Trigger (crontab): Jeden Tag ")
-            .appendField("um")
+            .appendField("jeden Tag um")
             .appendField(new Blockly.FieldNumber(0, 0), "HH")
             .appendField(":")
             .appendField(new Blockly.FieldNumber(0, 0), "MM")
-            .appendField("Uhr")
-            .appendField("als Trigger")
+            .appendField("Uhr, mit dem Triggerwert")
             .appendField(new Blockly.FieldTextInput("trigger_id"), "NAME");
-        this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
         this.setInputsInline(false);
         this.setPreviousStatement(true, SHNG_TRIGGER_TYPES);
         this.setNextStatement(true, SHNG_TRIGGER_TYPES);
@@ -390,7 +378,7 @@ Blockly.Blocks["sh_trigger_daily"] = {
     isShngTriggerDefinition: true,
     getShngTriggerInformation: function () {
         var trigger_id = this.getFieldValue("NAME");
-        var comment = this.getFieldValue("COMMENT");
+        var comment = this.getCommentText();
         var cronstring = this.getShngTriggerCrontab();
         return {
             type: "trigger_daily",
@@ -406,21 +394,17 @@ Blockly.Blocks["sh_trigger_daily"] = {
     },
 };
 
-Blockly.Python["sh_trigger_daily"] = function (block) {
-    return ""; // This must not return any code, as the complete interpretation is done within sh_logic_main
-};
-
 /**
  * Trigger bei Initialisierung auslösen
  */
+Blockly.Python["sh_trigger_init"] = DO_NOT_GENERATE_CODE_FOR_TRIGGERS;
 Blockly.Blocks["sh_trigger_init"] = {
     init: function () {
         this.setColour(190);
         this.appendDummyInput()
-            .appendField("Trigger (crontab): Bei Initialisierung auslösen, ")
-            .appendField("als Trigger")
+            .appendField("bei jeder Initialisierung von SmarthomeNG,")
+            .appendField("mit dem Triggerwert")
             .appendField(new Blockly.FieldTextInput("Init"), "NAME");
-        this.appendDummyInput().appendField("Kommentar").appendField(new Blockly.FieldTextInput(""), "COMMENT");
         this.setInputsInline(false);
         this.setPreviousStatement(true, SHNG_TRIGGER_TYPES);
         this.setNextStatement(true, SHNG_TRIGGER_TYPES);
@@ -430,7 +414,7 @@ Blockly.Blocks["sh_trigger_init"] = {
     isShngTriggerDefinition: true,
     getShngTriggerInformation: function () {
         var trigger_id = this.getFieldValue("NAME");
-        var comment = this.getFieldValue("COMMENT");
+        var comment = this.getCommentText();
         var cronstring = this.getShngTriggerCrontab();
 
         return {
@@ -443,8 +427,4 @@ Blockly.Blocks["sh_trigger_init"] = {
     getShngTriggerCrontab: function () {
         return "init";
     },
-};
-
-Blockly.Python["sh_trigger_init"] = function (trigger_block) {
-    return ""; // This must not return any code, as the complete interpretation is done within sh_logic_main
 };
