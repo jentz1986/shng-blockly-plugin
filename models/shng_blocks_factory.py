@@ -38,10 +38,13 @@ def translate_to_blockly_shadow_type(value_type, default_value=None):
         else:
             return ("math_number", None)
     elif value_type == "String":
-        if default_value is not None:
-            return ("text", "TEXT")
-        else:
+        if default_value is None:
             return ("text", None)
+        else:
+            if default_value == '<<NULL>>':
+                return ("logic_null", None)
+            else:
+                return ("text", "TEXT")
     return (None, None)
 
 
@@ -522,6 +525,8 @@ class ShngPluginFunctionsToBlockly():
                     if func_param_yaml[par].get('type', 'foo') == 'str':
                         if p_default == 'None*':
                             p_default = 'None'
+                        if p_default == 'None':
+                            p_default = '<<NULL>>'
                         else:
                             p_default = p_default
                 yield {"p_name": p_name, "p_type_raw": p_type, "p_type": self.__simplify_types_for_blockly(p_type, p_name), "p_default": p_default}
@@ -578,6 +583,7 @@ class ShngPluginFunctionsToBlockly():
             plugin_category.add_block("shng_function_return_ignorer")
             for function in self.plugin_functions[plugin]:
                 new_block = plugin_category.add_block("shng_plugin_function")
+                new_block.name = f'{plugin}.{function["m_name"]}'
                 new_block.add_field("PO_NAME", plugin)  # which plugin-object
                 new_block.add_field(
                     "M_NAME", function["m_name"])  # which method?
@@ -594,11 +600,8 @@ class ShngPluginFunctionsToBlockly():
                     self.__assign_default_value_for_parameter_as_shadow(
                         input_value, param)
                     new_block.add_field(f"P{index}_NAME", param["p_name"])
-                    new_block.add_field(f"P{index}_TYPE", param["p_type"])
                     new_block.add_field(
                         f"P{index}_TYPE_RAW", param["p_type_raw"])
-                    new_block.add_field(
-                        f"P{index}_DEFAULT", param["p_default"])
                 new_block.add_field("M_RET_TYPE", function["m_ret_type"])
                 new_block.add_field(
                     "M_RET_TYPE_RAW", function["m_ret_type_raw"])
@@ -753,20 +756,22 @@ class ShngBlockFactory():
         root_cat = BlocklyCategory(self.translate("Text"))
         root_cat.add_block("text")
         root_cat.add_block("text_join")
-        root_cat.add_block("text_append").add_value("TEXT").add_block("text")
+        root_cat.add_block("text_append").add_value("TEXT").add_shadow("text")
         root_cat.add_block("text_length")
         root_cat.add_block("text_isEmpty")
-        root_cat.add_block("text_indexOf").add_value("VALUE").add_block(
-            "variables_get").add_field("VAR", "...", class_="textVar")
-        root_cat.add_block("text_charAt").add_value("VALUE").add_block(
-            "variables_get").add_field("VAR", "...", class_="textVar")
-        root_cat.add_block("text_getSubstring").add_value("STRING").add_block(
-            "variables_get").add_field("VAR", "...", class_="textVar")
+        index_of = root_cat.add_block("text_indexOf")
+        index_of.add_value("VALUE").add_shadow("text")
+        index_of.add_value("FIND").add_shadow("text")
+        
+        char_at = root_cat.add_block("text_charAt")
+        char_at.add_value("VALUE").add_shadow("text").add_field("TEXT", "Durchsuchter Text")
+        char_at.add_value("AT").add_shadow("math_number").add_field("NUM", 5)
+        substring = root_cat.add_block("text_getSubstring")
+        substring.add_value("STRING").add_shadow("text").add_field("TEXT", "Durchsuchter Text")
+        substring.add_value("AT1").add_shadow("math_number").add_field("NUM", 1)
+        substring.add_value("AT2").add_shadow("math_number").add_field("NUM", 10)
         root_cat.add_block("text_changeCase")
         root_cat.add_block("text_trim")
-        root_cat.add_block("text_print")
-        root_cat.add_block("text_prompt_ext").add_value(
-            "TEXT").add_block("text")
         return root_cat
 
     def __get_blocks_lists(self) -> BlocklyCategory:

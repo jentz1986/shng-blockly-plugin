@@ -75,7 +75,7 @@ plugin_translations:
         "de": "Items"
         "en": "="
     "IfElse":
-        "de": "Wenn, dann"
+        "de": "Im Logikverlauf: Falls, mache"
         "en": "if, then"
     "Boolean":
         "de": "Aussagenlogik"

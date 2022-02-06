@@ -1,15 +1,31 @@
 #codemirror_frame {
-  margin: 5px;
-  width: 100%; 
-  height: calc(100vh - 260px);
+    margin: 5px;
+    width: 100%;
+    height: calc(100vh - 260px);
 }
 
 div.CodeMirror {
-  width: calc(100vw - 30px);
-  height: 100%;
+    width: calc(100vw - 30px);
+    height: 100%;
 }
 
 #content_blocks {
-  width: 100%;
-  height: calc(100vh - 260px);
+    width: 100%;
+    height: calc(100vh - 260px);
+}
+
+#validation-summary .fa-skull-crossbones {
+    color: red;
+}
+
+#validation-summary .fa-exclamation-triangle {
+    color: yellow;
+}
+
+#validation-summary .fa-info-circle {
+    color: green;
+}
+
+#validation-summary .fa-check {
+    color: green;
 }

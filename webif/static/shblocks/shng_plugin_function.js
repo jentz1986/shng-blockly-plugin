@@ -71,10 +71,6 @@ Blockly.Blocks["shng_plugin_function"] = {
             this.appendValueInput("PARAM" + param_no)
                 .appendField(new Blockly.FieldLabelSerializable("p-name"), "P" + param_no + "_NAME")
                 .appendField(new Blockly.FieldLabelSerializable("p-type"), "P" + param_no + "_TYPE_RAW");
-            this.appendDummyInput()
-                .appendField(input_type_field, "P" + param_no + "_TYPE")
-                .appendField(new Blockly.FieldTextInput("default"), "P" + param_no + "_DEFAULT")
-                .setVisible(false);
         }
         this.setInputsInline(false);
 
@@ -108,7 +104,7 @@ Blockly.Python["shng_plugin_function"] = function (block) {
 
 Blockly.Blocks["shng_function_return_ignorer"] = {
     init: function () {
-        this.appendValueInput("EXECUTED").setCheck(null).appendField("execute").appendField("and ignore result");
+        this.appendValueInput("EXECUTED").setCheck(null).appendField("Führe Funktion aus").appendField("und ignoriere das Ergebnis");
         this.setInputsInline(false);
         this.setPreviousStatement(true, null);
         this.setNextStatement(true, null);

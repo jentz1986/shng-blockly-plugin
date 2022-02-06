@@ -21,7 +21,15 @@ ShngBlockly_Engine.calledWhenWorkspaceWasUpdated = function (event) {
     ShngBlockly_Engine.refreshPython();
     $("h6")
         .first()
-        .html("<b>Logic: </b>" + ShngBlockly_Engine.getLogicName() + "<br />" + ShngBlockly_Engine.validationSummary);
+        .html(
+            "<b>Logic: </b>" +
+                ShngBlockly_Engine.getLogicName() +
+                '<div id="validation-summary"><i class="fas fa-' +
+                ShngBlockly_Engine.getValidationOutcomeFasIcon() +
+                '"></i> &nbsp;' +
+                ShngBlockly_Engine.validationSummary+
+                '</div>'
+        );
 };
 
 ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
@@ -54,10 +62,15 @@ ShngBlockly_Engine.init = function (blockly_area_id, python_area_id) {
 
 ShngBlockly_Engine.validationSummary = "";
 
-ShngBlockly_Engine.validationIssueList = [];
+ShngBlockly_Engine.validationIssueList = {};
+ShngBlockly_Engine.validationIssueList.infos = [];
+ShngBlockly_Engine.validationIssueList.warnings = [];
+ShngBlockly_Engine.validationIssueList.errors = [];
 
 ShngBlockly_Engine.validateWorkspace = function () {
-    ShngBlockly_Engine.validationIssueList = [];
+    ShngBlockly_Engine.validationIssueList.infos = [];
+    ShngBlockly_Engine.validationIssueList.warnings = [];
+    ShngBlockly_Engine.validationIssueList.errors = [];
 
     var topBlocks = ShngBlockly_Engine.blockly_workspace.getTopBlocks();
     var allBlocksWithinLogicOrFunction = true;
@@ -69,18 +82,47 @@ ShngBlockly_Engine.validateWorkspace = function () {
         }
     });
     if (!allBlocksWithinLogicOrFunction) {
-        ShngBlockly_Engine.validationIssueList.push("Alle Elemente müssen entweder Teil der Logik, oder einer Funktion sein.");
+        ShngBlockly_Engine.validationIssueList.errors.push("Alle Elemente müssen entweder Teil der Logik, oder einer Funktion sein.");
     }
 
-    if (ShngBlockly_Engine.validationIssueList.length == 0) {
+    let totalNumberOfValidationIssues =
+        ShngBlockly_Engine.validationIssueList.infos.length +
+        ShngBlockly_Engine.validationIssueList.warnings.length +
+        ShngBlockly_Engine.validationIssueList.errors.length;
+
+    if (totalNumberOfValidationIssues == 0) {
         ShngBlockly_Engine.validationSummary = "Keine Syntaxfehler!";
     } else {
-        if (ShngBlockly_Engine.validationIssueList.length == 1) {
-            ShngBlockly_Engine.validationSummary = ShngBlockly_Engine.validationIssueList[0];
+        if (totalNumberOfValidationIssues == 1) {
+            if (ShngBlockly_Engine.validationIssueList.errors.length == 1) {
+                ShngBlockly_Engine.validationSummary = ShngBlockly_Engine.validationIssueList.errors[0];
+            } else if (ShngBlockly_Engine.validationIssueList.warnings.length == 1) {
+                ShngBlockly_Engine.validationSummary = ShngBlockly_Engine.validationIssueList.warnings[0];
+            } else if (ShngBlockly_Engine.validationIssueList.infos.length == 1) {
+                ShngBlockly_Engine.validationSummary = ShngBlockly_Engine.validationIssueList.infos[0];
+            }
         } else {
-            ShngBlockly_Engine.validationSummary = "" + ShngBlockly_Engine.validationIssueList.length + " Probleme";
+            ShngBlockly_Engine.validationSummary =
+                "" +
+                ShngBlockly_Engine.validationIssueList.errors.length +
+                " Fehler / " +
+                ShngBlockly_Engine.validationIssueList.warnings.length +
+                " Warnungen / " +
+                ShngBlockly_Engine.validationIssueList.infos.length +
+                " Vorschläge";
         }
     }
+};
+
+ShngBlockly_Engine.getValidationOutcomeFasIcon = function () {
+    if (ShngBlockly_Engine.validationIssueList.errors.length > 0) {
+        return "skull-crossbones";
+    } else if (ShngBlockly_Engine.validationIssueList.warnings.length == 1) {
+        return "exclamation-triangle";
+    } else if (ShngBlockly_Engine.validationIssueList.infos.length == 1) {
+        return "info-circle";
+    }
+    return "check";
 };
 
 ShngBlockly_Engine.loadToolbox = function () {
